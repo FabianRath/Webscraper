@@ -16,8 +16,6 @@ import threading
 import csv
 
 
-
-
 def startDriver():
     # create a new Chrome webdriver
     newdriver = webdriver.Chrome()
