@@ -16,7 +16,6 @@ import threading
 import csv
 
 
-
 def startDriver():
     """
     Starts Chrome webdriver
@@ -101,10 +100,10 @@ def save(element, extracted_text):
     """
     Moves the mouse to the specified position and extracts the date
     """""
-    pyautogui.moveTo(1880, 200)
-    pyautogui.moveTo(1879, 200)
-    controllDate = text(find(
-        "/html/body/app-root/rit-dashboard/rit-dialog/div/div/div[2]/rit-sensor-things-widget/div/div[2]/div/div[2]"))
+    pyautogui.moveTo(1880, 250)
+    pyautogui.moveTo(1879, 250)
+    pyautogui.moveTo(1878, 251)
+    controllDate = text(find("/html/body/app-root/rit-dashboard/rit-dialog/div/div/div[2]/rit-sensor-things-widget/div/div[2]/div/div[2]"))
     date_regex = r"\d{2}\.\d{2}\."
     match = re.search(date_regex, controllDate)
     number = element.text
@@ -127,24 +126,19 @@ def getDataDashboard(bool):
     """
     Navigates to the specified part of the website and gathers all the available data 
     """""
-    click(find(
-        "/html/body/app-root/rit-dashboard/div[1]/gridster/gridster-item[8]/rit-sensor-things-widget/div[1]/i[4]"))
+    click(find("/html/body/app-root/rit-dashboard/div[1]/gridster/gridster-item[8]/rit-sensor-things-widget/div[1]/i[4]"))
     time.sleep(2)
-    click(find(
-        "/html/body/app-root/rit-dashboard/div[1]/gridster/gridster-item[8]/rit-sensor-things-widget/div[1]/i[2]"))
+    click(find("/html/body/app-root/rit-dashboard/div[1]/gridster/gridster-item[8]/rit-sensor-things-widget/div[1]/i[2]"))
     time.sleep(1)
-    click(
-        find("/html/body/app-root/rit-dashboard/rit-dialog/div/div/div[1]/div/i[1]"))
+    click(find("/html/body/app-root/rit-dashboard/rit-dialog/div/div/div[1]/div/i[1]"))
     time.sleep(1)
 
     common_xpath = '/html/body/app-root/rit-dashboard/rit-dialog/div/div/div[2]/rit-sensor-things-widget/div/div[2]/div/div[2]'
 
     for i in range(1000):
         try:
-            click(find(
-                "/html/body/app-root/rit-dashboard/rit-dialog/div/div/div[2]/rit-sensor-things-widget/div/div[3]/ul/li["+str(i+1)+"]"))
-            texts, lines = save(find(common_xpath), text(find(
-                "/html/body/app-root/rit-dashboard/rit-dialog/div/div/div[2]/rit-sensor-things-widget/div/div[3]/ul/li["+str(i+1)+"]")))
+            click(find("/html/body/app-root/rit-dashboard/rit-dialog/div/div/div[2]/rit-sensor-things-widget/div/div[3]/ul/li["+str(i+1)+"]"))
+            texts, lines = save(find(common_xpath), text(find("/html/body/app-root/rit-dashboard/rit-dialog/div/div/div[2]/rit-sensor-things-widget/div/div[3]/ul/li["+str(i+1)+"]")))
             saveToExcel(texts, lines)
             csvParser(lines)
         except:
@@ -188,8 +182,7 @@ def getWeatherData(content):
         allvalues = substring.split(',')
         datavalues = datastring.split(',')
         pattern = re.compile(r"(\w+):(\d+\.\d+)")
-        dataNames = ["Min. Tempearatur in °C",
-                     "Max. Temperatur °C", "Niederschlagsmenge in l/m²"]
+        dataNames = ["Min. Tempearatur in °C", "Max. Temperatur °C", "Niederschlagsmenge in l/m²"]
         del datavalues[0]
         del datavalues[0]
         for i, data in enumerate(datavalues):
@@ -239,7 +232,8 @@ def getBilder(content):
                r'bws2__.png',
                r'bwr1__.png',
                r'bwr2__.png',
-               r'bwg1__.png']
+               r'bwg1__.png',
+               r'bws1__.png']
     matches = re.findall(regex, content)
     match = ', '.join(matches)
     for regex in regexes:
@@ -263,8 +257,7 @@ def startExcel():
     if not os.path.exists('C:/Users/Fabian/Desktop/radwegzaehler/Excel/data.xlsx'):
         workbook = openpyxl.Workbook()
     else:
-        workbook = openpyxl.load_workbook(
-            'C:/Users/Fabian/Desktop/radwegzaehler/Excel/data.xlsx')
+        workbook = openpyxl.load_workbook('C:/Users/Fabian/Desktop/radwegzaehler/Excel/data.xlsx')
     return workbook
 
 
@@ -355,37 +348,27 @@ def saveToExcel(filenames, data):
     row_num = counter2()
     if type(data) == list:
         if len(data) == 2:
-            worksheet.cell(row=row_num+4, column=col_num +
-                           1).value = (filenames+" "+data[0])
+            worksheet.cell(row=row_num+4, column=col_num+1).value = (filenames+" "+data[0])
             if (int(data[1]) != 0):
-                worksheet.cell(
-                    row=row_num+4, column=col_num+2).value = int(data[1])
+                worksheet.cell(row=row_num+4, column=col_num+2).value = int(data[1])
             else:
-                worksheet.cell(row=row_num+4, column=col_num +
-                               2).value = "No Data"
+                worksheet.cell(row=row_num+4, column=col_num+2).value = "No Data"
             counter2minus1()
         if len(data) == 4:
-            worksheet.cell(row=row_num+4, column=col_num +
-                           1).value = (filenames+" "+data[0])
-            worksheet.cell(row=row_num+4+1, column=col_num +
-                           1).value = (filenames+" "+data[2])
+            worksheet.cell(row=row_num+4, column=col_num+1).value = (filenames+" "+data[0])
+            worksheet.cell(row=row_num+4+1, column=col_num+1).value = (filenames+" "+data[2])
+            print(filenames+": ")
+            print(data)
             if (int(data[1]) != 0 and int(data[3]) != 0):
-                worksheet.cell(row=row_num+4, column=col_num +
-                               2).value = int(data[1])
-                worksheet.cell(row=row_num+4+1, column=col_num +
-                               2).value = int(data[3])
+                worksheet.cell(row=row_num+4, column=col_num+2).value = int(data[1])
+                worksheet.cell(row=row_num+4+1, column=col_num+2).value = int(data[3])
             else:
-                worksheet.cell(row=row_num+4, column=col_num +
-                               2).value = "No Data"
-                worksheet.cell(row=row_num+4+1,
-                               column=col_num+2).value = "No Data"
+                worksheet.cell(row=row_num+4, column=col_num +2).value = "No Data"
+                worksheet.cell(row=row_num+4+1, column=col_num+2).value = "No Data"
     if type(data) == int:
         worksheet.cell(row=row_num+4, column=col_num+1).value = (filenames)
         worksheet.cell(row=row_num+4, column=col_num+2).value = "No Data"
-        if (filenames == "Vennbahntrasse (Ecke Philipsstraße)" or filenames == "Bismarckstraße" or filenames == "Königstraße" or filenames == "Lothringer Straße" or filenames == "Templergraben"):
-            worksheet.cell(row=row_num+4+1, column=col_num+1).value = "No Data"
-        else:
-            counter2minus1()
+        counter2minus1()
 
 
 def saveToExcel2(dataNames, datavalues):
@@ -414,7 +397,7 @@ def saveToExcel3(imgName):
 
 def scale_column_width(column_number):
     """
-    Scales the width of the column to 11, BROKEN
+    Scales the width of the column to size 11
     """""
     column_letter = get_column_letter(column_number)
     column_dimensions = worksheet.column_dimensions
@@ -427,9 +410,7 @@ def checker():
     Checks if all for the day data has been written into the excel file
     """""
     column_letter_1 = openpyxl.utils.get_column_letter(col_num+1)
-    column_letter_2 = openpyxl.utils.get_column_letter(col_num + 2)
     column_index_1 = openpyxl.utils.column_index_from_string(column_letter_1)
-    column_index_2 = openpyxl.utils.column_index_from_string(column_letter_2)
     column_1_empty = True
     for row in range(3, worksheet.max_row + 1):
         if (row != 6):
@@ -470,7 +451,7 @@ def csvParser(lines):
 
 def csvBackup():
     """
-    Writes all data into a new csv file for each day, BROKEN
+    Writes all data into a new csv file for each day
     """""
     x = 0
     text = []
@@ -520,15 +501,11 @@ while True:
                 counter2.count = 1
                 driver = startDriver()
                 # multithreading for the gathering and saving of the data from the three websites
-                thread1 = threading.Thread(
-                    target=lambda: getDataDashboard(startDashboard()))
-                thread2 = threading.Thread(
-                    target=lambda: getWeatherData(startWeather()))
-                thread3 = threading.Thread(
-                    target=lambda: getBilder(startPictures()))
+                thread1 = threading.Thread(target=lambda: getDataDashboard(startDashboard()))
+                thread2 = threading.Thread(target=lambda: getWeatherData(startWeather()))
+                thread3 = threading.Thread(target=lambda: getBilder(startPictures()))
                 thread4 = threading.Thread(target=lambda: csvBackup())
-                thread5 = threading.Thread(target=lambda: workbook.save(
-                    "C:/Users/Fabian/Desktop/radwegzaehler/Excel/data.xlsx"))
+                thread5 = threading.Thread(target=lambda: workbook.save("C:/Users/Fabian/Desktop/radwegzaehler/Excel/data.xlsx"))
                 thread1.start()
                 thread2.start()
                 thread3.start()
