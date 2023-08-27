@@ -17,6 +17,7 @@ import csv
 import tkinter as tk
 import threading
 from tkinter import simpledialog
+import subprocess
 
 """
 TO RUN FOR A PAST DAY CHANGE dateDE TO THE CORRESPONDING DATE AND CHANGE pyautogui.moveTo() TO THE CORRESPONDING POSITION (yesterday will be ~ 1580)
@@ -145,9 +146,10 @@ def getDataDashboard(bool):
             click(find("/html/body/app-root/rit-dashboard/rit-dialog/div/div/div[2]/rit-sensor-things-widget/div/div[3]/ul/li["+str(i+1)+"]"))
             texts, lines = save(find(common_xpath), text(find("/html/body/app-root/rit-dashboard/rit-dialog/div/div/div[2]/rit-sensor-things-widget/div/div[3]/ul/li["+str(i+1)+"]")))
             saveToExcel(texts, lines)
-            #csvParser(lines)
+            csvParser(lines)
         except:
             break
+    csvDataCollect(dataList, 2)
 
 
 def getWeatherData(content):
@@ -259,10 +261,10 @@ def startExcel():
     """
     Loads/Creates an excel file named data.xlsx
     """""
-    if not os.path.exists('C:/Users/Fabian/Desktop/radwegzaehler/Excel/data.xlsx'):
+    if not os.path.exists(current_path+"/Excel/data.xlsx"):
         workbook = openpyxl.Workbook()
     else:
-        workbook = openpyxl.load_workbook('C:/Users/Fabian/Desktop/radwegzaehler/Excel/data.xlsx')
+        workbook = openpyxl.load_workbook(current_path+"/Excel/data.xlsx")
     return workbook
 
 
@@ -314,10 +316,10 @@ def findFirstEmptyCol():
     """
     Returns the first empty column that is not the first one
     """""
-    if not os.path.exists('C:/Users/Fabian/Desktop/radwegzaehler/Excel/data.xlsx'):
+    if not os.path.exists(current_path+"/Excel/data.xlsx"):
         return 1
     else:
-        path = "C:/Users/Fabian/Desktop/radwegzaehler/Excel/data.xlsx"
+        path = current_path+"/Excel/data.xlsx"
         df = pd.read_excel(path, sheet_name=0)
         empty_col = df.iloc[:, 1:].columns[(df.iloc[:, 1:].isna().all())]
         if empty_col.empty:
@@ -331,10 +333,10 @@ def findLastSavedDate():
     """
     Finds the date from the last time the script ran, returns true if the last saved date is yesterdays date. Returns false if that is not the case
     """""
-    if not os.path.exists('C:/Users/Fabian/Desktop/radwegzaehler/Excel/data.xlsx'):
+    if not os.path.exists(current_path+"/Excel/data.xlsx"):
         return False
     else:
-        path = "C:/Users/Fabian/Desktop/radwegzaehler/Excel/data.xlsx"
+        path = current_path+"/Excel/data.xlsx"
         df = pd.read_excel(path)
         highest_column_value = df.iloc[0, df.shape[1] - 1]
         # Check if the value is equal to the variable 'dateDE'
@@ -436,6 +438,7 @@ def csvDataCollect(data_list, index):
         csvDataLists[2] = data_list
     elif index == 2:
         csvDataLists[3] = data_list
+    
 
 
 def csvParser(lines):
@@ -449,6 +452,7 @@ def csvParser(lines):
         dataList.append(lines[3])
     elif (len(lines) == 2):
         dataList.append(lines[1])
+    
 
 
 def csvBackup():
@@ -459,7 +463,7 @@ def csvBackup():
     text = []
     text.append("Bilder Name nicht passend zum Datum +1 Tag")
     csvDataLists.insert(0, text)
-    csvFileName = "C:\\Users\\Fabian\\Desktop\\radwegzaehler\\Csv\\"+dateDE+".csv"
+    csvFileName = current_path+"/Csv/"+dateDE+".csv"
     if os.path.isfile(csvFileName):
         os.remove(csvFileName)
     with open(csvFileName, 'a', newline='') as file:
@@ -475,6 +479,8 @@ def csvBackup():
                     else:
                         writer.writerow(["No Data"])
 
+# get the current path
+current_path = os.getcwd()[:-8]
 # assign the value 1 to the count attribute of the counter2 object
 counter2.count = 1
 # create a date object representing the current date of yesterday
@@ -496,7 +502,6 @@ dataList = []
 # position in px that the mouse gets moved during scraping process
 move_mouse_x_koord = 1880
 
-
 def scrape():
     global col_num
     col_num = findFirstEmptyCol()
@@ -512,7 +517,7 @@ def scrape():
                 thread2 = threading.Thread(target=lambda: getWeatherData(startWeather()))
                 thread3 = threading.Thread(target=lambda: getBilder(startPictures()))
                 thread4 = threading.Thread(target=lambda: csvBackup())
-                thread5 = threading.Thread(target=lambda: workbook.save("C:/Users/Fabian/Desktop/radwegzaehler/Excel/data.xlsx"))
+                thread5 = threading.Thread(target=lambda: workbook.save(current_path+"\Excel\data.xlsx"))
                 thread1.start()
                 thread2.start()
                 thread3.start()
@@ -537,7 +542,7 @@ def delete():
     Will delete the last data entry
     """""
     worksheet.delete_cols(findFirstEmptyCol()-1, 2)
-    workbook.save("C:/Users/Fabian/Desktop/radwegzaehler/Excel/data.xlsx")
+    workbook.save(current_path+"/Excel/data.xlsx")
 
 
 def past_day():
@@ -559,11 +564,17 @@ def past_day():
     scrape()
     
     
+def file_location():
+    root.attributes("-topmost", 0)
+    subprocess.Popen(['explorer', current_path])
+    
+    
 def run_action():
     """
     Runs the standard data scraper for yesterday
     """""
     def run():
+        root.attributes("-topmost", 1)
         root.config(cursor="wait")
         button_run.config(bg="yellow")
         scrape()
@@ -579,6 +590,7 @@ def delete_action():
     set the cursor to the waiting icon for the duration of the deletion proses 
     """""
     def run():
+        root.attributes("-topmost", 1)
         root.config(cursor="wait")
         button_delete.config(bg="yellow")
         delete()
@@ -594,9 +606,17 @@ def run_yesterday_action():
     and will make the button appear yellow and set the cursor to the waiting 
     icon for the duration of the deletion proses 
     """""
+    root.attributes("-topmost", 1)
     root.config(cursor="wait")
     button_yesterday.config(bg="yellow")
     past_day()
+    button_yesterday.config(bg="SystemButtonFace")
+    root.config(cursor="arrow")
+    
+def open_file_location_action():
+    root.config(cursor="wait")
+    button_yesterday.config(bg="yellow")
+    file_location()
     button_yesterday.config(bg="SystemButtonFace")
     root.config(cursor="arrow")
 
@@ -607,7 +627,7 @@ def setup():
     """""
     root.title("Data Scraper")
 
-    icon_path = "C:/Users/Fabian/Desktop/radwegzaehler/Icon/krackenIcon.ico"
+    icon_path = current_path+"/Icon/krackenIcon.ico"
     root.iconbitmap(icon_path)
 
     screen_width = root.winfo_screenwidth()
@@ -628,13 +648,16 @@ def labels():
     Creates all three labels and gives them their text, sizes and positions
     """""
     label1 = tk.Label(root, text="Scrapes data from yesterday", width=25, wraplength=200)
-    label1.place(x=window_width/2-window_width/3-label1.winfo_reqwidth()/2, y=200)  # Adjust x and y coordinates
+    label1.place(x=window_width/2-window_width/3-label1.winfo_reqwidth()/2, y=200)
 
     label2 = tk.Label(root, text="Deletes the last data entry", width=25, wraplength=200)
-    label2.place(x=window_width/2-label2.winfo_reqwidth()/2, y=200)  # Adjust x and y coordinates
+    label2.place(x=window_width/2-label2.winfo_reqwidth()/2, y=200)
 
     label3 = tk.Label(root, text="Choose from how many days ago the data gets scraped (1-6)", width=25, wraplength=200)
-    label3.place(x=window_width/2+window_width/3-label3.winfo_reqwidth()/2, y=200)  # Adjust x and y coordinates
+    label3.place(x=window_width/2+window_width/3-label3.winfo_reqwidth()/2, y=200)
+    
+    label3 = tk.Label(root, text="Opens the file explorer", width=25, wraplength=200)
+    label3.place(x=window_width/2-label2.winfo_reqwidth()/2, y=100)
 
 
 def buttons():
@@ -645,13 +668,16 @@ def buttons():
     global button_run, button_delete, button_yesterday
     
     button_run = tk.Button(root, text="RUN", width=button_width, height=2, command=run_action)
-    button_run.place(x=window_width/2-window_width/3-button_run.winfo_reqwidth()/2, y=150)  # Adjust x and y coordinates
+    button_run.place(x=window_width/2-window_width/3-button_run.winfo_reqwidth()/2, y=150)
 
     button_delete = tk.Button(root, text="DELETE", width=button_width, height=2, command=delete_action)
-    button_delete.place(x=window_width/2-button_delete.winfo_reqwidth()/2, y=150)  # Adjust x and y coordinates
+    button_delete.place(x=window_width/2-button_delete.winfo_reqwidth()/2, y=150)
 
     button_yesterday = tk.Button(root, text="RUN PAST DAYS", width=button_width, height=2, command=run_yesterday_action)
-    button_yesterday.place(x=window_width/2+window_width/3-button_yesterday.winfo_reqwidth()/2, y=150)  # Adjust x and y coordinates
+    button_yesterday.place(x=window_width/2+window_width/3-button_yesterday.winfo_reqwidth()/2, y=150)
+    
+    button_yesterday = tk.Button(root, text="OPEN FILE LOCATION", width=button_width, height=2, command=open_file_location_action)
+    button_yesterday.place(x=window_width/2-button_delete.winfo_reqwidth()/2, y=50)
 
 
 root = tk.Tk()
