@@ -1,4 +1,3 @@
-import datetime
 import os
 import time
 import openpyxl
@@ -9,13 +8,19 @@ from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
+import datetime
 from datetime import timedelta
 from openpyxl.utils import get_column_letter
 import requests
 import threading
 import csv
+import tkinter as tk
+import threading
+from tkinter import simpledialog
 
-
+"""
+TO RUN FOR A PAST DAY CHANGE dateDE TO THE CORRESPONDING DATE AND CHANGE pyautogui.moveTo() TO THE CORRESPONDING POSITION (yesterday will be ~ 1580)
+"""""
 def startDriver():
     """
     Starts Chrome webdriver
@@ -100,9 +105,9 @@ def save(element, extracted_text):
     """
     Moves the mouse to the specified position and extracts the date
     """""
-    pyautogui.moveTo(1880, 250)
-    pyautogui.moveTo(1879, 250)
-    pyautogui.moveTo(1878, 251)
+    pyautogui.moveTo(move_mouse_x_koord, 250)
+    pyautogui.moveTo(move_mouse_x_koord-1, 250)
+    pyautogui.moveTo(move_mouse_x_koord-2, 251)
     controllDate = text(find("/html/body/app-root/rit-dashboard/rit-dialog/div/div/div[2]/rit-sensor-things-widget/div/div[2]/div/div[2]"))
     date_regex = r"\d{2}\.\d{2}\."
     match = re.search(date_regex, controllDate)
@@ -140,7 +145,7 @@ def getDataDashboard(bool):
             click(find("/html/body/app-root/rit-dashboard/rit-dialog/div/div/div[2]/rit-sensor-things-widget/div/div[3]/ul/li["+str(i+1)+"]"))
             texts, lines = save(find(common_xpath), text(find("/html/body/app-root/rit-dashboard/rit-dialog/div/div/div[2]/rit-sensor-things-widget/div/div[3]/ul/li["+str(i+1)+"]")))
             saveToExcel(texts, lines)
-            csvParser(lines)
+            #csvParser(lines)
         except:
             break
 
@@ -193,10 +198,10 @@ def getWeatherData(content):
 
 def getBilder(content):
     """
-    Gathers the name of the weather icon of today
+    Gathers the name of the weather icon of date_today
     """""
     substringList = []
-    trimmed_date = dateDEToday[:-4]
+    trimmed_date = dateDEdate_Today[:-4]
     regex = r'<td class="" data-tt-args="\[&quot;'+trimmed_date+'&quot;,&quot;.*&quot;,&quot;.*&quot;,.,0, 0, &quot;&quot;, &quot;&quot;,0, &quot;&quot;, &quot;&quot;, &quot;&quot;, &quot;&quot;, &quot;&quot;, &quot;&quot;, &quot;&quot;, &quot;&quot;]" data-tt-function="TTwwsym">[\r\n]+ <img src="https:\/\/st\.wetteronline\.de\/dr\/1\.1\..*\/city\/prozess\/graphiken\/symbole\/standard\/farbe\/png\/[0-9][0-9]x[0-9][0-9]\/.*\.png'
     regexes = [r'bd____.png',
                r'bdg1__.png',
@@ -280,28 +285,28 @@ def date():
     """
     Gathers and returns the date from yesterday in format MM/DD/YYYY
     """""
-    today = datetime.date.today()
-    yesterday = today - timedelta(days=1)
+    date_today = datetime.date.today()
+    yesterday = date_today - timedelta(days=1)
     date_str = str(yesterday)
     return date_str
 
 
-def dateDE():
+def get_dateDE():
     """
     Gathers and returns the date from yesterday in format DD/MM/YYYY
     """""
-    today = datetime.date.today()
-    yesterday = today - timedelta(days=1)
+    date_today = datetime.date.today()
+    yesterday = date_today - timedelta(days=1)
     date_str = yesterday.strftime("%d.%m.%Y")
     return date_str
 
 
-def dateDEToday():
+def dateDEdate_Today():
     """
-    Gathers and returns the date from today in format DD/MM/YYYY
+    Gathers and returns the date from date_today in format DD/MM/YYYY
     """""
-    today = datetime.date.today()
-    date_str = today.strftime("%d.%m.%Y")
+    date_today = datetime.date.today()
+    date_str = date_today.strftime("%d.%m.%Y")
     return date_str
 
 
@@ -332,9 +337,8 @@ def findLastSavedDate():
         path = "C:/Users/Fabian/Desktop/radwegzaehler/Excel/data.xlsx"
         df = pd.read_excel(path)
         highest_column_value = df.iloc[0, df.shape[1] - 1]
-
         # Check if the value is equal to the variable 'dateDE'
-        if highest_column_value == dateDE:
+        if int(highest_column_value[:-8]) < int(dateDE[:-8]):
             return True
         else:
             return False
@@ -357,8 +361,7 @@ def saveToExcel(filenames, data):
         if len(data) == 4:
             worksheet.cell(row=row_num+4, column=col_num+1).value = (filenames+" "+data[0])
             worksheet.cell(row=row_num+4+1, column=col_num+1).value = (filenames+" "+data[2])
-            print(filenames+": ")
-            print(data)
+
             if (int(data[1]) != 0 and int(data[3]) != 0):
                 worksheet.cell(row=row_num+4, column=col_num+2).value = int(data[1])
                 worksheet.cell(row=row_num+4+1, column=col_num+2).value = int(data[3])
@@ -417,7 +420,6 @@ def checker():
             cell_value1 = worksheet.cell(row=row, column=column_index_1).value
             if cell_value1 is None:
                 column_1_empty = False
-                print("Column 1 False")
     return column_1_empty
 
 
@@ -473,15 +475,14 @@ def csvBackup():
                     else:
                         writer.writerow(["No Data"])
 
-
 # assign the value 1 to the count attribute of the counter2 object
 counter2.count = 1
 # create a date object representing the current date of yesterday
 date = date()
 # create a date object representing the current date in the German language of yesterday
-dateDE = dateDE()
+dateDE = get_dateDE()
 # create a date object representing the current date in the German language
-dateDEToday = dateDEToday()
+dateDEdate_Today = dateDEdate_Today()
 # find the first empty column in the worksheet and assign the result to the col_num variable
 col_num = findFirstEmptyCol()
 # create a new workbook object
@@ -492,13 +493,19 @@ worksheet = workbook.active
 csvDataLists = [[], [], [], []]
 # array for gathering data required for the csv backup
 dataList = []
+# position in px that the mouse gets moved during scraping process
+move_mouse_x_koord = 1880
 
-while True:
+
+def scrape():
+    global col_num
+    col_num = findFirstEmptyCol()
     try:
-        # if the script has not run already today
-        if findLastSavedDate() == False:
+        # if the script has not run already date_today
+        if findLastSavedDate():
             while (True):
                 counter2.count = 1
+                global driver 
                 driver = startDriver()
                 # multithreading for the gathering and saving of the data from the three websites
                 thread1 = threading.Thread(target=lambda: getDataDashboard(startDashboard()))
@@ -521,10 +528,136 @@ while True:
                 # if the excel file has been appropriately filled with data the loop breaks
                 if (checker()):
                     break
-        # if the scrip has ran already today the loop breaks
-        else:
-            break
-    # if an exception occurs, print a message and continue the loop
     except:
-        print("An error occurred, retrying...")
-        continue
+        print("scrape failed")
+
+
+def delete():
+    """
+    Will delete the last data entry
+    """""
+    worksheet.delete_cols(findFirstEmptyCol()-1, 2)
+    workbook.save("C:/Users/Fabian/Desktop/radwegzaehler/Excel/data.xlsx")
+
+
+def past_day():
+    """
+    Will run the scraper with the number of days in the past specified
+    """""
+    from datetime import datetime
+    user_input = simpledialog.askstring("Input", "Enter a number:", parent=root)
+    date_format = '%d.%m.%Y'
+    global dateDE
+    dateDE = get_dateDE()
+    original_sequence = [6, 5, 4, 3, 2, 1]
+    
+    date = datetime.strptime(dateDE, date_format)
+    new_date = date - timedelta(days=int(user_input)-1)
+    dateDE = new_date.strftime(date_format)
+    global move_mouse_x_koord
+    move_mouse_x_koord = ((root.winfo_screenwidth()/6)*original_sequence[int(user_input)-1])-100
+    scrape()
+    
+    
+def run_action():
+    """
+    Runs the standard data scraper for yesterday
+    """""
+    def run():
+        root.config(cursor="wait")
+        button_run.config(bg="yellow")
+        scrape()
+        button_run.config(bg="SystemButtonFace")
+        root.config(cursor="arrow")
+    thread = threading.Thread(target=run)
+    thread.start()
+
+
+def delete_action():
+    """
+    Will delete the last data entry and will make the button appear yellow and 
+    set the cursor to the waiting icon for the duration of the deletion proses 
+    """""
+    def run():
+        root.config(cursor="wait")
+        button_delete.config(bg="yellow")
+        delete()
+        button_delete.config(bg="SystemButtonFace")
+        root.config(cursor="arrow")
+    thread = threading.Thread(target=run)
+    thread.start()
+
+
+def run_yesterday_action():
+    """
+    Will run the scraper with the number of days in the past specified
+    and will make the button appear yellow and set the cursor to the waiting 
+    icon for the duration of the deletion proses 
+    """""
+    root.config(cursor="wait")
+    button_yesterday.config(bg="yellow")
+    past_day()
+    button_yesterday.config(bg="SystemButtonFace")
+    root.config(cursor="arrow")
+
+
+def setup():
+    """
+    Setup for the GUI
+    """""
+    root.title("Data Scraper")
+
+    icon_path = "C:/Users/Fabian/Desktop/radwegzaehler/Icon/krackenIcon.ico"
+    root.iconbitmap(icon_path)
+
+    screen_width = root.winfo_screenwidth()
+    screen_height = root.winfo_screenheight()
+    x_position = (screen_width - window_width) // 2
+    y_position = (screen_height - window_height) // 2 - -50
+
+    root.geometry(f"{window_width}x{window_height}+{x_position}+{y_position}")
+
+    labels()
+    buttons()
+    
+    root.mainloop()
+    
+    
+def labels():
+    """
+    Creates all three labels and gives them their text, sizes and positions
+    """""
+    label1 = tk.Label(root, text="Scrapes data from yesterday", width=25, wraplength=200)
+    label1.place(x=window_width/2-window_width/3-label1.winfo_reqwidth()/2, y=200)  # Adjust x and y coordinates
+
+    label2 = tk.Label(root, text="Deletes the last data entry", width=25, wraplength=200)
+    label2.place(x=window_width/2-label2.winfo_reqwidth()/2, y=200)  # Adjust x and y coordinates
+
+    label3 = tk.Label(root, text="Choose from how many days ago the data gets scraped (1-6)", width=25, wraplength=200)
+    label3.place(x=window_width/2+window_width/3-label3.winfo_reqwidth()/2, y=200)  # Adjust x and y coordinates
+
+
+def buttons():
+    """
+    Creates all three buttons and gives them their text, sizes and positions
+    """""
+    button_width = 20
+    global button_run, button_delete, button_yesterday
+    
+    button_run = tk.Button(root, text="RUN", width=button_width, height=2, command=run_action)
+    button_run.place(x=window_width/2-window_width/3-button_run.winfo_reqwidth()/2, y=150)  # Adjust x and y coordinates
+
+    button_delete = tk.Button(root, text="DELETE", width=button_width, height=2, command=delete_action)
+    button_delete.place(x=window_width/2-button_delete.winfo_reqwidth()/2, y=150)  # Adjust x and y coordinates
+
+    button_yesterday = tk.Button(root, text="RUN PAST DAYS", width=button_width, height=2, command=run_yesterday_action)
+    button_yesterday.place(x=window_width/2+window_width/3-button_yesterday.winfo_reqwidth()/2, y=150)  # Adjust x and y coordinates
+
+
+root = tk.Tk()
+# Width and height of the GUI window
+window_width = 700
+window_height = 400
+# Makes sure that the GUI stays on top and doesn't get minimized
+root.attributes("-topmost", 1)
+setup()
