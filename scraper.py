@@ -18,10 +18,10 @@ import tkinter as tk
 import threading
 from tkinter import simpledialog
 import subprocess
+from tkinter import PhotoImage
+from tkinter import ttk
 
-"""
-TO RUN FOR A PAST DAY CHANGE dateDE TO THE CORRESPONDING DATE AND CHANGE pyautogui.moveTo() TO THE CORRESPONDING POSITION (yesterday will be ~ 1580)
-"""""
+
 def startDriver():
     """
     Starts Chrome webdriver
@@ -339,7 +339,6 @@ def findLastSavedDate():
         path = current_path+"/Excel/data.xlsx"
         df = pd.read_excel(path)
         highest_column_value = df.iloc[0, df.shape[1] - 1]
-        # Check if the value is equal to the variable 'dateDE'
         if int(highest_column_value[:-8]) < int(dateDE[:-8]):
             return True
         else:
@@ -418,12 +417,12 @@ def checker():
     """
     Checks if all for the day data has been written into the excel file
     """""
-    column_letter_1 = openpyxl.utils.get_column_letter(col_num+1)
-    column_index_1 = openpyxl.utils.column_index_from_string(column_letter_1)
+    column_letter = openpyxl.utils.get_column_letter(col_num+1)
+    column_index = openpyxl.utils.column_index_from_string(column_letter)
     column_1_empty = True
     for row in range(3, worksheet.max_row + 1):
         if (row != 6):
-            cell_value1 = worksheet.cell(row=row, column=column_index_1).value
+            cell_value1 = worksheet.cell(row=row, column=column_index).value
             if cell_value1 is None:
                 column_1_empty = False
     return column_1_empty
@@ -534,6 +533,7 @@ def scrape():
                 thread4.join()
                 thread5.join()
                 scale_column_width(col_num)
+                setup_table()
                 # if the excel file has been appropriately filled with data the loop breaks
                 if (checker()):
                     break
@@ -547,17 +547,15 @@ def delete():
     """""
     worksheet.delete_cols(findFirstEmptyCol()-1, 2)
     workbook.save(current_path+"/Excel/data.xlsx")
+    setup_table()
 
 
-def past_day():
-    """
-    Will run the scraper with the number of days in the past specified
-    """""
+def pre_scrape(user_input):
     from datetime import datetime
-    user_input = simpledialog.askstring("Input", "Enter a number:", parent=root)
-    date_format = '%d.%m.%Y'
     global dateDE
     dateDE = get_dateDE()
+    date_format = '%d.%m.%Y'
+    
     global date_reverse
     date_reverse = date(int(user_input))
     original_sequence = [6, 5, 4, 3, 2, 1]
@@ -568,6 +566,14 @@ def past_day():
     global move_mouse_x_koord
     move_mouse_x_koord = ((root.winfo_screenwidth()/6)*original_sequence[int(user_input)-1])-100
     scrape()
+    
+    
+def past_day():
+    """
+    Will run the scraper with the number of days in the past specified
+    """""
+    user_input = simpledialog.askstring("Input", "Enter a number:", parent=root)
+    pre_scrape(user_input)
     
     
 def file_location():
@@ -583,7 +589,7 @@ def run_action():
         root.attributes("-topmost", 1)
         root.config(cursor="wait")
         button_run.config(bg="yellow")
-        scrape()
+        pre_scrape(1)
         button_run.config(bg="SystemButtonFace")
         root.config(cursor="arrow")
     thread = threading.Thread(target=run)
@@ -619,12 +625,92 @@ def run_yesterday_action():
     button_yesterday.config(bg="SystemButtonFace")
     root.config(cursor="arrow")
     
+    
 def open_file_location_action():
     root.config(cursor="wait")
     button_file_explorer.config(bg="yellow")
     file_location()
     button_file_explorer.config(bg="SystemButtonFace")
     root.config(cursor="arrow")
+
+
+def read_excel():
+    """
+    Reads in data from the excel file to display it in the GUI
+    """""
+    dates = []
+    images = []
+    weatherList = []
+    dataList = []
+    
+    for x in range(0,6):
+        column_letter = openpyxl.utils.get_column_letter(col_num-x*2)
+        column_index = openpyxl.utils.column_index_from_string(column_letter)
+        
+        date = worksheet.cell(row=2, column=column_index).value
+        dates.append(date)
+        
+        image = worksheet.cell(row=3, column=column_index).value
+        images.append(image)
+        
+        for row in range(4, 7):
+            weather = worksheet.cell(row=row, column=column_index).value
+            weatherList.append(weather)
+
+        x = 0
+        tempList = []
+        
+        for row in range(7, worksheet.max_row + 1):
+                x += 1
+                cell_value = worksheet.cell(row=row, column=column_index).value
+                if cell_value is not None:
+                    tempList.append(True)
+                    
+        if len(tempList) != x:
+            dataList.append(False)
+        else:
+            dataList.append(True)
+
+    return dates, images, weatherList, dataList
+        
+
+
+def setup_table():
+    table_frame = tk.Frame(root)
+    table_frame.place(y=60, relx=0.5, rely=0.6, anchor=tk.CENTER, width=650, height=130)
+    
+    table = ttk.Treeview(table_frame, columns=("1","2","3","4","5","6",), show="headings")
+
+    col_width = 108
+    table.column("1", anchor=tk.W, width=col_width)
+    table.column("2", anchor=tk.W, width=col_width)
+    table.column("3", anchor=tk.W, width=col_width)
+    table.column("4", anchor=tk.W, width=col_width)
+    table.column("5", anchor=tk.W, width=col_width)
+    table.column("6", anchor=tk.W, width=col_width)
+
+    dates, images, weather, dataList = read_excel()
+    table.heading("1", text=dates[5])
+    table.heading("2", text=dates[4])
+    table.heading("3", text=dates[3])
+    table.heading("4", text=dates[2])
+    table.heading("5", text=dates[1])
+    table.heading("6", text=dates[0])
+
+
+    data = [
+        (images[5],images[4],images[3],images[2],images[1],images[0]),
+        (weather[15],weather[12],weather[9],weather[6],weather[3],weather[0]),
+        (weather[16],weather[13],weather[10],weather[7],weather[4],weather[1]),
+        (weather[17],weather[14],weather[11],weather[8],weather[5],weather[2]),
+        (dataList[5],dataList[4],dataList[3],dataList[2],dataList[1],dataList[0],)
+    ]
+
+    for item in data:
+        table.insert("", tk.END, values=item)
+
+    table.pack()
+
 
 
 def setup():
@@ -642,9 +728,14 @@ def setup():
     y_position = (screen_height - window_height) // 2 - -50
 
     root.geometry(f"{window_width}x{window_height}+{x_position}+{y_position}")
+    
+    background_image = PhotoImage(file=current_path+"/Icon/krackenIcon.png")
+    background_label = tk.Label(root, image=background_image)
+    background_label.place(relwidth=1, relheight=1)  
 
     labels()
     buttons()
+    setup_table()
     
     root.mainloop()
     
@@ -653,38 +744,39 @@ def labels():
     """
     Creates all three labels and gives them their text, sizes and positions
     """""
-    label1 = tk.Label(root, text="Scrapes data from yesterday", width=25, wraplength=200)
-    label1.place(x=window_width/2-window_width/3-label1.winfo_reqwidth()/2, y=200)
+    label_width = 25
+    label_height = 2
+    label1 = tk.Label(root, text="Scrapes data from yesterday", width=label_width, height=label_height, wraplength=200)
+    label1.place(x=window_width/2-window_width/3-label1.winfo_reqwidth()/2, y=175)
 
-    label2 = tk.Label(root, text="Deletes the last data entry", width=25, wraplength=200)
-    label2.place(x=window_width/2-label2.winfo_reqwidth()/2, y=200)
+    label2 = tk.Label(root, text="Deletes the last data entry", width=label_width, height=label_height, wraplength=200)
+    label2.place(x=window_width/2-label2.winfo_reqwidth()/2, y=175)
 
-    label3 = tk.Label(root, text="Choose from how many days ago the data gets scraped (1-6)", width=25, wraplength=200)
-    label3.place(x=window_width/2+window_width/3-label3.winfo_reqwidth()/2, y=200)
+    label3 = tk.Label(root, text="Choose from how many days ago the data gets scraped (1-6)", width=label_width, height=label_height, wraplength=200)
+    label3.place(x=window_width/2+window_width/3-label3.winfo_reqwidth()/2, y=175)
     
-    label3 = tk.Label(root, text="Opens the file explorer", width=25, wraplength=200)
-    label3.place(x=window_width/2-label2.winfo_reqwidth()/2, y=100)
+    label3 = tk.Label(root, text="Opens the file explorer", width=label_width, height=label_height, wraplength=200)
+    label3.place(x=window_width/2-label2.winfo_reqwidth()/2, y=60)
 
 
 def buttons():
     """
     Creates all three buttons and gives them their text, sizes and positions
     """""
-    button_width = 20
+    button_width = 25
     global button_run, button_delete, button_yesterday, button_file_explorer
     
     button_run = tk.Button(root, text="RUN", width=button_width, height=2, command=run_action)
-    button_run.place(x=window_width/2-window_width/3-button_run.winfo_reqwidth()/2, y=150)
+    button_run.place(x=window_width/2-window_width/3-button_run.winfo_reqwidth()/2, y=125)
 
     button_delete = tk.Button(root, text="DELETE", width=button_width, height=2, command=delete_action)
-    button_delete.place(x=window_width/2-button_delete.winfo_reqwidth()/2, y=150)
+    button_delete.place(x=window_width/2-button_delete.winfo_reqwidth()/2, y=125)
 
     button_yesterday = tk.Button(root, text="RUN PAST DAYS", width=button_width, height=2, command=run_yesterday_action)
-    button_yesterday.place(x=window_width/2+window_width/3-button_yesterday.winfo_reqwidth()/2, y=150)
+    button_yesterday.place(x=window_width/2+window_width/3-button_yesterday.winfo_reqwidth()/2, y=125)
     
     button_file_explorer = tk.Button(root, text="OPEN FILE LOCATION", width=button_width, height=2, command=open_file_location_action)
-    button_file_explorer.place(x=window_width/2-button_delete.winfo_reqwidth()/2, y=50)
-
+    button_file_explorer.place(x=window_width/2-button_delete.winfo_reqwidth()/2, y=10)
 
 root = tk.Tk()
 # Width and height of the GUI window
