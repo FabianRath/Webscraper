@@ -156,22 +156,22 @@ def getWeatherData(content):
     """
     Gathers all the needed weather data, parses the data to fit the needs
     """""
-    regexes = [r'{"date":"'+date+'","windSpeed":\d+,"temperatureMin":-?\d+,"temperatureMax":-?\d+,"precipitation":\d+}',
-               r'{"date":"'+date+'","windSpeed":\d+,"temperatureMin":-?\d+,"temperatureMax":-?\d+,"precipitation":\d+\.\d+}',
-               r'{"date":"'+date+'","windSpeed":\d+,"temperatureMin":-?\d+,"temperatureMax":-?\d+\.\d+,"precipitation":\d+}',
-               r'{"date":"'+date+'","windSpeed":\d+,"temperatureMin":-?\d+,"temperatureMax":-?\d+\.\d+,"precipitation":\d+\.\d+}',
-               r'{"date":"'+date+'","windSpeed":\d+,"temperatureMin":-?\d+\.\d+,"temperatureMax":-?\d+,"precipitation":\d+}',
-               r'{"date":"'+date+'","windSpeed":\d+,"temperatureMin":-?\d+\.\d+,"temperatureMax":-?\d+,"precipitation":\d+\.\d+}',
-               r'{"date":"'+date+'","windSpeed":\d+,"temperatureMin":-?\d+\.\d+,"temperatureMax":-?\d+\.\d+,"precipitation":\d+}',
-               r'{"date":"'+date+'","windSpeed":\d+,"temperatureMin":-?\d+\.\d+,"temperatureMax":-?\d+\.\d+,"precipitation":\d+\.\d+}',
-               r'{"date":"'+date+'","windSpeed":\d+\.\d+,"temperatureMin":-?\d+,"temperatureMax":-?\d+,"precipitation":\d+}',
-               r'{"date":"'+date+'","windSpeed":\d+\.\d+,"temperatureMin":-?\d+,"temperatureMax":-?\d+,"precipitation":\d+\.\d+}',
-               r'{"date":"'+date+'","windSpeed":\d+\.\d+,"temperatureMin":-?\d+,"temperatureMax":-?\d+\.\d+,"precipitation":\d+}',
-               r'{"date":"'+date+'","windSpeed":\d+\.\d+,"temperatureMin":-?\d+,"temperatureMax":-?\d+\.\d+,"precipitation":\d+\.\d+}',
-               r'{"date":"'+date+'","windSpeed":\d+\.\d+,"temperatureMin":-?\d+\.\d+,"temperatureMax":-?\d+,"precipitation":\d+}',
-               r'{"date":"'+date+'","windSpeed":\d+\.\d+,"temperatureMin":-?\d+\.\d+,"temperatureMax":-?\d+,"precipitation":\d+\.\d+}',
-               r'{"date":"'+date+'","windSpeed":\d+\.\d+,"temperatureMin":-?\d+\.\d+,"temperatureMax":-?\d+\.\d+,"precipitation":\d+}',
-               r'{"date":"'+date+'","windSpeed":\d+\.\d+,"temperatureMin":-?\d+\.\d+,"temperatureMax":-?\d+\.\d+,"precipitation":\d+\.\d+}']
+    regexes = [r'{"date":"'+date_reverse+'","windSpeed":\d+,"temperatureMin":-?\d+,"temperatureMax":-?\d+,"precipitation":\d+}',
+               r'{"date":"'+date_reverse+'","windSpeed":\d+,"temperatureMin":-?\d+,"temperatureMax":-?\d+,"precipitation":\d+\.\d+}',
+               r'{"date":"'+date_reverse+'","windSpeed":\d+,"temperatureMin":-?\d+,"temperatureMax":-?\d+\.\d+,"precipitation":\d+}',
+               r'{"date":"'+date_reverse+'","windSpeed":\d+,"temperatureMin":-?\d+,"temperatureMax":-?\d+\.\d+,"precipitation":\d+\.\d+}',
+               r'{"date":"'+date_reverse+'","windSpeed":\d+,"temperatureMin":-?\d+\.\d+,"temperatureMax":-?\d+,"precipitation":\d+}',
+               r'{"date":"'+date_reverse+'","windSpeed":\d+,"temperatureMin":-?\d+\.\d+,"temperatureMax":-?\d+,"precipitation":\d+\.\d+}',
+               r'{"date":"'+date_reverse+'","windSpeed":\d+,"temperatureMin":-?\d+\.\d+,"temperatureMax":-?\d+\.\d+,"precipitation":\d+}',
+               r'{"date":"'+date_reverse+'","windSpeed":\d+,"temperatureMin":-?\d+\.\d+,"temperatureMax":-?\d+\.\d+,"precipitation":\d+\.\d+}',
+               r'{"date":"'+date_reverse+'","windSpeed":\d+\.\d+,"temperatureMin":-?\d+,"temperatureMax":-?\d+,"precipitation":\d+}',
+               r'{"date":"'+date_reverse+'","windSpeed":\d+\.\d+,"temperatureMin":-?\d+,"temperatureMax":-?\d+,"precipitation":\d+\.\d+}',
+               r'{"date":"'+date_reverse+'","windSpeed":\d+\.\d+,"temperatureMin":-?\d+,"temperatureMax":-?\d+\.\d+,"precipitation":\d+}',
+               r'{"date":"'+date_reverse+'","windSpeed":\d+\.\d+,"temperatureMin":-?\d+,"temperatureMax":-?\d+\.\d+,"precipitation":\d+\.\d+}',
+               r'{"date":"'+date_reverse+'","windSpeed":\d+\.\d+,"temperatureMin":-?\d+\.\d+,"temperatureMax":-?\d+,"precipitation":\d+}',
+               r'{"date":"'+date_reverse+'","windSpeed":\d+\.\d+,"temperatureMin":-?\d+\.\d+,"temperatureMax":-?\d+,"precipitation":\d+\.\d+}',
+               r'{"date":"'+date_reverse+'","windSpeed":\d+\.\d+,"temperatureMin":-?\d+\.\d+,"temperatureMax":-?\d+\.\d+,"precipitation":\d+}',
+               r'{"date":"'+date_reverse+'","windSpeed":\d+\.\d+,"temperatureMin":-?\d+\.\d+,"temperatureMax":-?\d+\.\d+,"precipitation":\d+\.\d+}']
     for regex in regexes:
         matches = re.findall(regex, content)
         if len(matches) != 0:
@@ -283,12 +283,12 @@ def counter2minus1():
     counter2.count -= 1
 
 
-def date():
+def date(minus_days):
     """
     Gathers and returns the date from yesterday in format MM/DD/YYYY
     """""
     date_today = datetime.date.today()
-    yesterday = date_today - timedelta(days=1)
+    yesterday = date_today - timedelta(days=minus_days)
     date_str = str(yesterday)
     return date_str
 
@@ -393,8 +393,12 @@ def saveToExcel3(imgName):
     """
     Writes the name of the weather icon to the excel file
     """""
+    from datetime import datetime
+    global dateDE
+    temp1 = datetime.strptime(dateDE, '%d.%m.%Y')
+    temp2 = datetime.strptime(dateDEdate_Today, '%d.%m.%Y')
     worksheet.cell(row=3, column=col_num+1).value = 'Wetter Symbol'
-    if (not imgName):
+    if (not imgName or temp1 + timedelta(days=1) != temp2):
         worksheet.cell(row=3, column=col_num+2).value = "No Data"
     else:
         worksheet.cell(row=3, column=col_num+2).value = imgName
@@ -484,7 +488,7 @@ current_path = os.getcwd()[:-8]
 # assign the value 1 to the count attribute of the counter2 object
 counter2.count = 1
 # create a date object representing the current date of yesterday
-date = date()
+date_reverse = date(1)
 # create a date object representing the current date in the German language of yesterday
 dateDE = get_dateDE()
 # create a date object representing the current date in the German language
@@ -554,10 +558,12 @@ def past_day():
     date_format = '%d.%m.%Y'
     global dateDE
     dateDE = get_dateDE()
+    global date_reverse
+    date_reverse = date(int(user_input))
     original_sequence = [6, 5, 4, 3, 2, 1]
     
-    date = datetime.strptime(dateDE, date_format)
-    new_date = date - timedelta(days=int(user_input)-1)
+    temp_date = datetime.strptime(dateDE, date_format)
+    new_date = temp_date - timedelta(days=int(user_input)-1)
     dateDE = new_date.strftime(date_format)
     global move_mouse_x_koord
     move_mouse_x_koord = ((root.winfo_screenwidth()/6)*original_sequence[int(user_input)-1])-100
@@ -615,9 +621,9 @@ def run_yesterday_action():
     
 def open_file_location_action():
     root.config(cursor="wait")
-    button_yesterday.config(bg="yellow")
+    button_file_explorer.config(bg="yellow")
     file_location()
-    button_yesterday.config(bg="SystemButtonFace")
+    button_file_explorer.config(bg="SystemButtonFace")
     root.config(cursor="arrow")
 
 
@@ -665,7 +671,7 @@ def buttons():
     Creates all three buttons and gives them their text, sizes and positions
     """""
     button_width = 20
-    global button_run, button_delete, button_yesterday
+    global button_run, button_delete, button_yesterday, button_file_explorer
     
     button_run = tk.Button(root, text="RUN", width=button_width, height=2, command=run_action)
     button_run.place(x=window_width/2-window_width/3-button_run.winfo_reqwidth()/2, y=150)
@@ -676,8 +682,8 @@ def buttons():
     button_yesterday = tk.Button(root, text="RUN PAST DAYS", width=button_width, height=2, command=run_yesterday_action)
     button_yesterday.place(x=window_width/2+window_width/3-button_yesterday.winfo_reqwidth()/2, y=150)
     
-    button_yesterday = tk.Button(root, text="OPEN FILE LOCATION", width=button_width, height=2, command=open_file_location_action)
-    button_yesterday.place(x=window_width/2-button_delete.winfo_reqwidth()/2, y=50)
+    button_file_explorer = tk.Button(root, text="OPEN FILE LOCATION", width=button_width, height=2, command=open_file_location_action)
+    button_file_explorer.place(x=window_width/2-button_delete.winfo_reqwidth()/2, y=50)
 
 
 root = tk.Tk()
