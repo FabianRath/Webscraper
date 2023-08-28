@@ -20,6 +20,7 @@ from tkinter import simpledialog
 import subprocess
 from tkinter import PhotoImage
 from tkinter import ttk
+import sys
 
 
 def startDriver():
@@ -443,7 +444,6 @@ def csvDataCollect(data_list, index):
         csvDataLists[3] = data_list
     
 
-
 def csvParser(lines):
     """
     Parses zählstellen data into one list
@@ -456,7 +456,6 @@ def csvParser(lines):
     elif (len(lines) == 2):
         dataList.append(lines[1])
     
-
 
 def csvBackup():
     """
@@ -482,8 +481,8 @@ def csvBackup():
                     else:
                         writer.writerow(["No Data"])
 
-# get the current path
-current_path = os.getcwd()[:-8]
+
+current_path = "C:/Users/Fabian/Desktop/radwegzaehler"
 # assign the value 1 to the count attribute of the counter2 object
 counter2.count = 1
 # create a date object representing the current date of yesterday
@@ -504,6 +503,7 @@ csvDataLists = [[], [], [], []]
 dataList = []
 # position in px that the mouse gets moved during scraping process
 move_mouse_x_koord = 1880
+
 
 def scrape():
     global col_num
@@ -533,7 +533,6 @@ def scrape():
                 thread4.join()
                 thread5.join()
                 scale_column_width(col_num)
-                setup_table()
                 # if the excel file has been appropriately filled with data the loop breaks
                 if (checker()):
                     break
@@ -541,13 +540,35 @@ def scrape():
         print("scrape failed")
 
 
+def setup_table():
+    table_frame = tk.Frame(root)
+    table_frame.place(y=60, relx=0.5, rely=0.6, anchor=tk.CENTER, width=650, height=130)
+    
+    global table
+    table = ttk.Treeview(table_frame, columns=("1","2","3","4","5","6",), show="headings")
+
+    col_width = 108
+    table.column("1", anchor=tk.W, width=col_width)
+    table.column("2", anchor=tk.W, width=col_width)
+    table.column("3", anchor=tk.W, width=col_width)
+    table.column("4", anchor=tk.W, width=col_width)
+    table.column("5", anchor=tk.W, width=col_width)
+    table.column("6", anchor=tk.W, width=col_width)
+    
+    def run():
+        while(True):
+            update_table()
+            time.sleep(1)
+    thread = threading.Thread(target=run)
+    thread.start()
+    
+    
 def delete():
     """
     Will delete the last data entry
     """""
     worksheet.delete_cols(findFirstEmptyCol()-1, 2)
     workbook.save(current_path+"/Excel/data.xlsx")
-    setup_table()
 
 
 def pre_scrape(user_input):
@@ -642,61 +663,52 @@ def read_excel():
     images = []
     weatherList = []
     dataList = []
-    
-    for x in range(0,6):
-        column_letter = openpyxl.utils.get_column_letter(col_num-x*2)
-        column_index = openpyxl.utils.column_index_from_string(column_letter)
-        
-        date = worksheet.cell(row=2, column=column_index).value
-        dates.append(date)
-        
-        image = worksheet.cell(row=3, column=column_index).value
-        images.append(image)
-        
-        for row in range(4, 7):
-            weather = worksheet.cell(row=row, column=column_index).value
-            weatherList.append(weather)
+    col_num = findFirstEmptyCol()
+    if os.path.exists(current_path+"/Excel/data.xlsx"):
+        for x in range(0,6):
+            column_letter = openpyxl.utils.get_column_letter(col_num-x*2)
+            column_index = openpyxl.utils.column_index_from_string(column_letter)
+            
+            date = worksheet.cell(row=2, column=column_index).value
+            dates.append(date)
+            
+            image = worksheet.cell(row=3, column=column_index).value
+            images.append(image)
+            
+            for row in range(4, 7):
+                weather = worksheet.cell(row=row, column=column_index).value
+                weatherList.append(weather)
 
-        x = 0
-        tempList = []
-        
-        for row in range(7, worksheet.max_row + 1):
-                x += 1
-                cell_value = worksheet.cell(row=row, column=column_index).value
-                if cell_value is not None:
-                    tempList.append(True)
-                    
-        if len(tempList) != x:
-            dataList.append(False)
-        else:
-            dataList.append(True)
-
+            x = 0
+            tempList = []
+            
+            for row in range(7, worksheet.max_row + 1):
+                    x += 1
+                    cell_value = worksheet.cell(row=row, column=column_index).value
+                    if cell_value is not None:
+                        tempList.append(True)
+                        
+            if len(tempList) != x:
+                dataList.append(False)
+            else:
+                dataList.append(True)
+    else:
+        dates = [0,0,0,0,0,0]
+        images = [0,0,0,0,0,0]
+        weatherList = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]
+        dataList = [False,False,False,False,False,False]
     return dates, images, weatherList, dataList
         
 
-
-def setup_table():
-    table_frame = tk.Frame(root)
-    table_frame.place(y=60, relx=0.5, rely=0.6, anchor=tk.CENTER, width=650, height=130)
-    
-    table = ttk.Treeview(table_frame, columns=("1","2","3","4","5","6",), show="headings")
-
-    col_width = 108
-    table.column("1", anchor=tk.W, width=col_width)
-    table.column("2", anchor=tk.W, width=col_width)
-    table.column("3", anchor=tk.W, width=col_width)
-    table.column("4", anchor=tk.W, width=col_width)
-    table.column("5", anchor=tk.W, width=col_width)
-    table.column("6", anchor=tk.W, width=col_width)
-
+def update_table():
     dates, images, weather, dataList = read_excel()
+    
     table.heading("1", text=dates[5])
     table.heading("2", text=dates[4])
     table.heading("3", text=dates[3])
     table.heading("4", text=dates[2])
     table.heading("5", text=dates[1])
     table.heading("6", text=dates[0])
-
 
     data = [
         (images[5],images[4],images[3],images[2],images[1],images[0]),
@@ -712,15 +724,14 @@ def setup_table():
     table.pack()
 
 
-
 def setup():
     """
     Setup for the GUI
     """""
     root.title("Data Scraper")
 
-    icon_path = current_path+"/Icon/krackenIcon.ico"
-    root.iconbitmap(icon_path)
+    icon_path = "krackenIcon.ico"
+    root.iconbitmap(get_path(icon_path))
 
     screen_width = root.winfo_screenwidth()
     screen_height = root.winfo_screenheight()
@@ -729,7 +740,7 @@ def setup():
 
     root.geometry(f"{window_width}x{window_height}+{x_position}+{y_position}")
     
-    background_image = PhotoImage(file=current_path+"/Icon/krackenIcon.png")
+    background_image = PhotoImage(file=get_path("krackenIcon.png"))
     background_label = tk.Label(root, image=background_image)
     background_label.place(relwidth=1, relheight=1)  
 
@@ -739,7 +750,7 @@ def setup():
     
     root.mainloop()
     
-    
+
 def labels():
     """
     Creates all three labels and gives them their text, sizes and positions
@@ -777,6 +788,14 @@ def buttons():
     
     button_file_explorer = tk.Button(root, text="OPEN FILE LOCATION", width=button_width, height=2, command=open_file_location_action)
     button_file_explorer.place(x=window_width/2-button_delete.winfo_reqwidth()/2, y=10)
+
+
+def get_path(filename):
+    if hasattr(sys, "_MEIPASS"):
+        return os.path.join(sys._MEIPASS, filename)
+    else:
+        return filename
+
 
 root = tk.Tk()
 # Width and height of the GUI window
