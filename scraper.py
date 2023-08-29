@@ -38,8 +38,7 @@ def startDashboard():
     url = 'https://verkehr.aachen.de'
     driver.get(url)
     driver.maximize_window()
-    time.sleep(2)
-    return True
+    return 1
 
 
 def startWeather():
@@ -77,8 +76,11 @@ def click(element):
     """
     Clicks on an element, will wait up to 5 seconds for the element to load
     """""
-    wait = WebDriverWait(driver, 5)
-    wait.until(EC.element_to_be_clickable(element)).click()
+    try:
+        wait = WebDriverWait(driver, 5)
+        wait.until(EC.element_to_be_clickable(element)).click()
+    except:
+        print("fail click")
 
 
 def text(element):
@@ -107,7 +109,6 @@ def save(element, extracted_text):
     """
     Moves the mouse to the specified position and extracts the date
     """""
-    pyautogui.moveTo(move_mouse_x_koord, 250)
     pyautogui.moveTo(move_mouse_x_koord-1, 250)
     pyautogui.moveTo(move_mouse_x_koord-2, 251)
     controllDate = text(find("/html/body/app-root/rit-dashboard/rit-dialog/div/div/div[2]/rit-sensor-things-widget/div/div[2]/div/div[2]"))
@@ -132,24 +133,30 @@ def save(element, extracted_text):
 def getDataDashboard(bool):
     """
     Navigates to the specified part of the website and gathers all the available data 
-    """""
+    """  
+    # Perform the necessary clicks to navigate to the desired data
     click(find("/html/body/app-root/rit-dashboard/div[1]/gridster/gridster-item[8]/rit-sensor-things-widget/div[1]/i[4]"))
-    time.sleep(2)
     click(find("/html/body/app-root/rit-dashboard/div[1]/gridster/gridster-item[8]/rit-sensor-things-widget/div[1]/i[2]"))
-    time.sleep(1)
     click(find("/html/body/app-root/rit-dashboard/rit-dialog/div/div/div[1]/div/i[1]"))
-    time.sleep(1)
 
-    common_xpath = '/html/body/app-root/rit-dashboard/rit-dialog/div/div/div[2]/rit-sensor-things-widget/div/div[2]/div/div[2]'
+    common_xpath1 = '/html/body/app-root/rit-dashboard/rit-dialog/div/div/div[2]/rit-sensor-things-widget/div/div[2]/div/div[2]'
+    common_xpath2 = '/html/body/app-root/rit-dashboard/rit-dialog/div/div/div[2]/rit-sensor-things-widget/div/div[3]/ul/li['
 
+    lines_list = []
+    texts_list = []
     for i in range(1000):
         try:
-            click(find("/html/body/app-root/rit-dashboard/rit-dialog/div/div/div[2]/rit-sensor-things-widget/div/div[3]/ul/li["+str(i+1)+"]"))
-            texts, lines = save(find(common_xpath), text(find("/html/body/app-root/rit-dashboard/rit-dialog/div/div/div[2]/rit-sensor-things-widget/div/div[3]/ul/li["+str(i+1)+"]")))
-            saveToExcel(texts, lines)
-            csvParser(lines)
+            click(find(common_xpath2 + str(i + 1) + "]"))
+            texts, lines = save(find(common_xpath1), text(find(common_xpath2 + str(i + 1) + "]")))
+            texts_list.append(texts)
+            lines_list.append(lines)
         except:
             break
+    
+    for lines, texts in zip(lines_list, texts_list):
+        saveToExcel(texts, lines)
+        csvParser(lines)
+        
     csvDataCollect(dataList, 2)
 
 
@@ -320,14 +327,17 @@ def findFirstEmptyCol():
     if not os.path.exists(current_path+"/Excel/data.xlsx"):
         return 1
     else:
-        path = current_path+"/Excel/data.xlsx"
-        df = pd.read_excel(path, sheet_name=0)
-        empty_col = df.iloc[:, 1:].columns[(df.iloc[:, 1:].isna().all())]
-        if empty_col.empty:
-            number = df.shape[1]
-            return number
-        else:
-            return empty_col[0]
+        try:
+            path = current_path+"/Excel/data.xlsx"
+            df = pd.read_excel(path, sheet_name=0, engine='openpyxl')
+            empty_col = df.iloc[:, 1:].columns[(df.iloc[:, 1:].isna().all())]
+            if empty_col.empty:
+                number = df.shape[1]
+                return number
+            else:
+                return empty_col[0]
+        except:
+            print("find first empty col")
 
 
 def findLastSavedDate():
@@ -482,7 +492,7 @@ def csvBackup():
                         writer.writerow(["No Data"])
 
 
-current_path = "C:/Users/Fabian/Desktop/radwegzaehler"
+current_path = "C:\\Users\\Fabian\\Desktop\\radwegzaehler"
 # assign the value 1 to the count attribute of the counter2 object
 counter2.count = 1
 # create a date object representing the current date of yesterday
@@ -503,7 +513,9 @@ csvDataLists = [[], [], [], []]
 dataList = []
 # position in px that the mouse gets moved during scraping process
 move_mouse_x_koord = 1880
-
+# temp storage
+old_dates = [] 
+old_dataList = []
 
 def scrape():
     global col_num
@@ -539,29 +551,6 @@ def scrape():
     except:
         print("scrape failed")
 
-
-def setup_table():
-    table_frame = tk.Frame(root)
-    table_frame.place(y=60, relx=0.5, rely=0.6, anchor=tk.CENTER, width=650, height=130)
-    
-    global table
-    table = ttk.Treeview(table_frame, columns=("1","2","3","4","5","6",), show="headings")
-
-    col_width = 108
-    table.column("1", anchor=tk.W, width=col_width)
-    table.column("2", anchor=tk.W, width=col_width)
-    table.column("3", anchor=tk.W, width=col_width)
-    table.column("4", anchor=tk.W, width=col_width)
-    table.column("5", anchor=tk.W, width=col_width)
-    table.column("6", anchor=tk.W, width=col_width)
-    
-    def run():
-        while(True):
-            update_table()
-            time.sleep(1)
-    thread = threading.Thread(target=run)
-    thread.start()
-    
     
 def delete():
     """
@@ -599,7 +588,7 @@ def past_day():
     
 def file_location():
     root.attributes("-topmost", 0)
-    subprocess.Popen(['explorer', current_path])
+    subprocess.Popen(['explorer', current_path+"\\Excel\\"])
     
     
 def run_action():
@@ -655,6 +644,29 @@ def open_file_location_action():
     root.config(cursor="arrow")
 
 
+def setup_table():
+    table_frame = tk.Frame(root)
+    table_frame.place(y=60, relx=0.5, rely=0.6, anchor=tk.CENTER, width=650, height=130)
+    
+    global table
+    table = ttk.Treeview(table_frame, columns=("1","2","3","4","5","6",), show="headings")
+
+    col_width = 108
+    table.column("1", anchor=tk.W, width=col_width)
+    table.column("2", anchor=tk.W, width=col_width)
+    table.column("3", anchor=tk.W, width=col_width)
+    table.column("4", anchor=tk.W, width=col_width)
+    table.column("5", anchor=tk.W, width=col_width)
+    table.column("6", anchor=tk.W, width=col_width)
+    
+    def run():
+        while(True):
+            update_table()
+            time.sleep(1)
+    thread = threading.Thread(target=run)
+    thread.start()
+    
+
 def read_excel():
     """
     Reads in data from the excel file to display it in the GUI
@@ -701,27 +713,35 @@ def read_excel():
         
 
 def update_table():
-    dates, images, weather, dataList = read_excel()
+    global old_dates
+    global old_dataList
     
-    table.heading("1", text=dates[5])
-    table.heading("2", text=dates[4])
-    table.heading("3", text=dates[3])
-    table.heading("4", text=dates[2])
-    table.heading("5", text=dates[1])
-    table.heading("6", text=dates[0])
+    dates, images, weather, dataList = read_excel()
 
-    data = [
-        (images[5],images[4],images[3],images[2],images[1],images[0]),
-        (weather[15],weather[12],weather[9],weather[6],weather[3],weather[0]),
-        (weather[16],weather[13],weather[10],weather[7],weather[4],weather[1]),
-        (weather[17],weather[14],weather[11],weather[8],weather[5],weather[2]),
-        (dataList[5],dataList[4],dataList[3],dataList[2],dataList[1],dataList[0],)
-    ]
+    if(old_dates != dates or dataList != old_dataList):
+        table.delete(*table.get_children())
 
-    for item in data:
-        table.insert("", tk.END, values=item)
+        table.heading("1", text=dates[5])
+        table.heading("2", text=dates[4])
+        table.heading("3", text=dates[3])
+        table.heading("4", text=dates[2])
+        table.heading("5", text=dates[1])
+        table.heading("6", text=dates[0])
 
-    table.pack()
+        data = [
+            (images[5],images[4],images[3],images[2],images[1],images[0]),
+            (weather[15],weather[12],weather[9],weather[6],weather[3],weather[0]),
+            (weather[16],weather[13],weather[10],weather[7],weather[4],weather[1]),
+            (weather[17],weather[14],weather[11],weather[8],weather[5],weather[2]),
+            (dataList[5],dataList[4],dataList[3],dataList[2],dataList[1],dataList[0],)
+        ]
+
+        for item in data:
+            table.insert("", tk.END, values=item)
+
+        table.pack()
+        old_dates = dates
+        old_dataList = dataList
 
 
 def setup():
