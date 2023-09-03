@@ -1,7 +1,6 @@
 import os
 import time
 import openpyxl
-import pyautogui
 import re
 import pandas as pd
 from selenium import webdriver
@@ -21,6 +20,7 @@ import subprocess
 from tkinter import PhotoImage
 from tkinter import ttk
 import sys
+import urllib.parse
 
 
 def startDriver():
@@ -33,12 +33,11 @@ def startDriver():
 
 def startDashboard():
     """
-    Loads 'https://verkehr.aachen.de' in the webdriver and maximizes it
+    Sends an API request to 'https://verkehr.aachen.de'
     """""
-    url = 'https://verkehr.aachen.de'
-    driver.get(url)
-    driver.maximize_window()
-    return 1
+    url = "https://verkehr.aachen.de/api/sensorthings/Things?$count=false&$filter=properties/type%20eq%20%27Verkehrszaehlstelle%27%20and%20properties/archive%20eq%20%27false%27&$expand=Locations,Datastreams(%24filter%3Dproperties%2FKlasse%20eq%20%27Bike%27%20and%20properties%2FAggregation%20eq%20%27d%27),Datastreams%2FObservedProperty,Datastreams%2FObservations(%24top%3D7%3B%24orderby%3DphenomenonTime%20desc%3B%24select%3Dresult%2CphenomenonTime%3B%24filter%3Ddate(phenomenonTime)%20ge%20date("+API_date+"))&$top=300&$select=@iot.id,description,name,properties/props&$orderBy=name"
+    html_source = send_api_request_with_timeout(url)
+    return html_source
 
 
 def startWeather():
@@ -61,103 +60,68 @@ def startPictures():
     return html_source
 
 
-def find(xpath):
-    """
-    Returns the element specified by an XPATH, returns 0 if the element can not be found
-    """""
-    try:
-        element = driver.find_element(By.XPATH, xpath)
-        return element
-    except Exception:
-        return 0
-
-
-def click(element):
-    """
-    Clicks on an element, will wait up to 5 seconds for the element to load
-    """""
-    try:
-        wait = WebDriverWait(driver, 5)
-        wait.until(EC.element_to_be_clickable(element)).click()
-    except:
-        print("fail click")
-
-
-def text(element):
-    """
-    Returns the text of an element, replaces '/' with ''
-    """""
-    text = element.text
-    if text == "KopernikusstraßeSeffenter Weg":
-        new_text = "Kopernikusstraße Seffenter Weg"
-    else:
-        new_text = text.replace("/", "")
-    return new_text
-
-
-def bild(element):
-    """
-    Returns the name of the image 
-    """""
-    image_url = element.get_attribute('src')
-    components = os.path.split(image_url)
-    file_name = os.path.basename(components[-1])
-    return file_name
-
-
-def save(element, extracted_text):
-    """
-    Moves the mouse to the specified position and extracts the date
-    """""
-    pyautogui.moveTo(move_mouse_x_koord-1, 250)
-    pyautogui.moveTo(move_mouse_x_koord-2, 251)
-    controllDate = text(find("/html/body/app-root/rit-dashboard/rit-dialog/div/div/div[2]/rit-sensor-things-widget/div/div[2]/div/div[2]"))
-    date_regex = r"\d{2}\.\d{2}\."
-    match = re.search(date_regex, controllDate)
-    number = element.text
-    if (len(number) > 0):
-        lines = number.splitlines()
-        del lines[0]
-        if (match.group() == dateDE[:-4]):
-            return (extracted_text, lines)
-        else:
-            if (len(lines) == 4):
-                return (extracted_text, [lines[0], 0, lines[2], 0])
-            elif (len(lines) == 2):
-                return (extracted_text, (lines[0], 0))
-    else:
-        lines = 0
-        return (extracted_text, lines)
-
-
-def getDataDashboard(bool):
-    """
-    Navigates to the specified part of the website and gathers all the available data 
-    """  
-    # Perform the necessary clicks to navigate to the desired data
-    click(find("/html/body/app-root/rit-dashboard/div[1]/gridster/gridster-item[8]/rit-sensor-things-widget/div[1]/i[4]"))
-    click(find("/html/body/app-root/rit-dashboard/div[1]/gridster/gridster-item[8]/rit-sensor-things-widget/div[1]/i[2]"))
-    click(find("/html/body/app-root/rit-dashboard/rit-dialog/div/div/div[1]/div/i[1]"))
-
-    common_xpath1 = '/html/body/app-root/rit-dashboard/rit-dialog/div/div/div[2]/rit-sensor-things-widget/div/div[2]/div/div[2]'
-    common_xpath2 = '/html/body/app-root/rit-dashboard/rit-dialog/div/div/div[2]/rit-sensor-things-widget/div/div[3]/ul/li['
-
-    lines_list = []
-    texts_list = []
-    for i in range(1000):
+def send_api_request_with_timeout(url, timeout=1, max_retries=10):
+    for _ in range(max_retries):
         try:
-            click(find(common_xpath2 + str(i + 1) + "]"))
-            texts, lines = save(find(common_xpath1), text(find(common_xpath2 + str(i + 1) + "]")))
-            texts_list.append(texts)
-            lines_list.append(lines)
-        except:
-            break
+            response = requests.get(url, timeout=timeout)
+            response.raise_for_status()
+            return response.text
+        except requests.exceptions.RequestException as e:
+            print(f"Request failed: {e}")
+            continue
+    raise Exception("Max retries reached, unable to fetch data from the API")
+
+
+def getDataDashboard(content):
+    """
     
-    for lines, texts in zip(lines_list, texts_list):
-        saveToExcel(texts, lines)
-        csvParser(lines)
+    """  
+    matches = re.findall('(.*?)\}\]\}\]\}', content)
+    
+    data_name_list = []
+    data_list = []
+    temp = []
+
+    for match in matches:
+        match1 = re.findall('label":"(.*?)"', match)
+        match2 = re.findall('name":"(Rad[^"~]+)', match)
+        match3 = re.findall('name":"Fahrr([^"~]+)', match)
+        match4 = re.findall(str(date(2))+'T22:00:00\.000Z","result":\s*([0-9.]+)', match)
         
-    csvDataCollect(dataList, 2)
+        if(len(match2) != 0):
+            if(len(match2) > 2):
+                temp = match2
+                match2 = []
+                match2.append(temp[0])
+                match2.append(temp[1])
+
+            temp = []
+            temp.append(str(match1[0]) + " " + str(match2[0]))
+            temp.append(str(match1[0])+ " " +str(match2[1]))
+            data_name_list.append(temp)
+
+        else:
+            if(len(match3) > 2):
+                    temp = match3
+                    match3 = []
+                    match3.append(temp[0])
+                    match3.append(temp[1])
+
+            temp = []
+            temp.append(str(match1[0]) + " " + str(match3[0]))
+            temp.append(str(match1[0])+ " " +str(match3[1]))
+            data_name_list.append(temp)
+
+        match4[0] = match4[0][:-2]
+        if(len(match4) == 2):
+            match4[1] = match4[1][:-2]
+        data_list.append(match4)
+             
+    for data_name, data in zip(data_name_list, data_list):
+        saveToExcel(data_name, data)
+        csvParser(data_name)
+        
+    csvDataCollect(data_list, 2)
 
 
 def getWeatherData(content):
@@ -320,6 +284,14 @@ def dateDEdate_Today():
     return date_str
 
 
+def get_API_date():
+    from datetime import datetime, timedelta
+    current_datetime = datetime.utcnow() - timedelta(days=7) 
+    iso8601_format = current_datetime.strftime("%Y-%m-%dT%H:%M:%S.%fZ")
+    url_encoded_iso8601_format = urllib.parse.quote(iso8601_format)
+    return url_encoded_iso8601_format
+
+
 def findFirstEmptyCol():
     """
     Returns the first empty column that is not the first one
@@ -344,17 +316,27 @@ def findLastSavedDate():
     """
     Finds the date from the last time the script ran, returns true if the last saved date is yesterdays date. Returns false if that is not the case
     """""
+    from datetime import datetime
     if not os.path.exists(current_path+"/Excel/data.xlsx"):
-        return False
+        return True
     else:
-        path = current_path+"/Excel/data.xlsx"
-        df = pd.read_excel(path)
-        highest_column_value = df.iloc[0, df.shape[1] - 1]
-        if int(highest_column_value[:-8]) < int(dateDE[:-8]):
+        try:
+            path = current_path+"/Excel/data.xlsx"
+            df = pd.read_excel(path)
+            highest_column_value = df.iloc[0, df.shape[1] - 1]
+            
+            date_format = "%d.%m.%Y"
+            formatted_highest_column_value = datetime.strptime(highest_column_value, date_format)
+            formatted_dateDE = datetime.strptime(dateDE, date_format)
+            
+            if formatted_highest_column_value < formatted_dateDE:
+                return True
+            else:
+                return False
+        except Exception as e: 
+            print(e)
             return True
-        else:
-            return False
-
+           
 
 def saveToExcel(filenames, data):
     """
@@ -362,29 +344,15 @@ def saveToExcel(filenames, data):
     """""
     worksheet.cell(row=2, column=col_num+2).value = dateDE
     row_num = counter2()
-    if type(data) == list:
-        if len(data) == 2:
-            worksheet.cell(row=row_num+4, column=col_num+1).value = (filenames+" "+data[0])
-            if (int(data[1]) != 0):
-                worksheet.cell(row=row_num+4, column=col_num+2).value = int(data[1])
-            else:
-                worksheet.cell(row=row_num+4, column=col_num+2).value = "No Data"
-            counter2minus1()
-        if len(data) == 4:
-            worksheet.cell(row=row_num+4, column=col_num+1).value = (filenames+" "+data[0])
-            worksheet.cell(row=row_num+4+1, column=col_num+1).value = (filenames+" "+data[2])
-
-            if (int(data[1]) != 0 and int(data[3]) != 0):
-                worksheet.cell(row=row_num+4, column=col_num+2).value = int(data[1])
-                worksheet.cell(row=row_num+4+1, column=col_num+2).value = int(data[3])
-            else:
-                worksheet.cell(row=row_num+4, column=col_num +2).value = "No Data"
-                worksheet.cell(row=row_num+4+1, column=col_num+2).value = "No Data"
-    if type(data) == int:
-        worksheet.cell(row=row_num+4, column=col_num+1).value = (filenames)
-        worksheet.cell(row=row_num+4, column=col_num+2).value = "No Data"
+    
+    worksheet.cell(row=row_num+4, column=col_num+1).value = (filenames[0]+":")
+    worksheet.cell(row=row_num+4, column=col_num+2).value = int(data[0])
+    if len(data) == 1:
         counter2minus1()
-
+    if len(data) == 2:
+        worksheet.cell(row=row_num+5, column=col_num+1).value = (filenames[1]+":")
+        worksheet.cell(row=row_num+5, column=col_num+2).value = int(data[1])
+        
 
 def saveToExcel2(dataNames, datavalues):
     """
@@ -412,16 +380,6 @@ def saveToExcel3(imgName):
         worksheet.cell(row=3, column=col_num+2).value = "No Data"
     else:
         worksheet.cell(row=3, column=col_num+2).value = imgName
-
-
-def scale_column_width(column_number):
-    """
-    Scales the width of the column to size 11
-    """""
-    column_letter = get_column_letter(column_number)
-    column_dimensions = worksheet.column_dimensions
-    column = column_dimensions[column_letter]
-    column.width = 11
 
 
 def checker():
@@ -516,6 +474,8 @@ move_mouse_x_koord = 1880
 # temp storage
 old_dates = [] 
 old_dataList = []
+xpath_cache = {}
+API_date = get_API_date()
 
 def scrape():
     global col_num
@@ -525,8 +485,6 @@ def scrape():
         if findLastSavedDate():
             while (True):
                 counter2.count = 1
-                global driver 
-                driver = startDriver()
                 # multithreading for the gathering and saving of the data from the three websites
                 thread1 = threading.Thread(target=lambda: getDataDashboard(startDashboard()))
                 thread2 = threading.Thread(target=lambda: getWeatherData(startWeather()))
@@ -541,23 +499,23 @@ def scrape():
                     thread.join()
                 thread4.start()
                 thread5.start()
-                driver.quit()
                 thread4.join()
                 thread5.join()
-                scale_column_width(col_num)
                 # if the excel file has been appropriately filled with data the loop breaks
                 if (checker()):
                     break
-    except:
+    except Exception as e: 
         print("scrape failed")
+        print(e)
 
     
 def delete():
     """
     Will delete the last data entry
     """""
-    worksheet.delete_cols(findFirstEmptyCol()-1, 2)
-    workbook.save(current_path+"/Excel/data.xlsx")
+    if(findFirstEmptyCol()-1 >= 0):
+        worksheet.delete_cols(findFirstEmptyCol()-1, 2)
+        workbook.save(current_path+"/Excel/data.xlsx")
 
 
 def pre_scrape(user_input):
@@ -573,8 +531,6 @@ def pre_scrape(user_input):
     temp_date = datetime.strptime(dateDE, date_format)
     new_date = temp_date - timedelta(days=int(user_input)-1)
     dateDE = new_date.strftime(date_format)
-    global move_mouse_x_koord
-    move_mouse_x_koord = ((root.winfo_screenwidth()/6)*original_sequence[int(user_input)-1])-100
     scrape()
     
     
@@ -678,7 +634,10 @@ def read_excel():
     col_num = findFirstEmptyCol()
     if os.path.exists(current_path+"/Excel/data.xlsx"):
         for x in range(0,6):
-            column_letter = openpyxl.utils.get_column_letter(col_num-x*2)
+            if(col_num-x*2 > 0):
+                column_letter = openpyxl.utils.get_column_letter(col_num-x*2)
+            else:
+                column_letter = "A"
             column_index = openpyxl.utils.column_index_from_string(column_letter)
             
             date = worksheet.cell(row=2, column=column_index).value
