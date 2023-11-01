@@ -86,7 +86,7 @@ def getDataDashboard(content):
         match1 = re.findall('label":"(.*?)"', match)
         match2 = re.findall('name":"(Rad[^"~]+)', match)
         match3 = re.findall('name":"Fahrr([^"~]+)', match)
-        match4 = re.findall(str(date(2))+'T22:00:00\.000Z","result":\s*([0-9.]+)', match)
+        match4 = re.findall(str(date(2))+'T23:00:00\.000Z","result":\s*([0-9.]+)', match)
         
         if(len(match2) != 0):
             if(len(match2) > 2):
@@ -478,12 +478,13 @@ xpath_cache = {}
 API_date = get_API_date()
 
 def scrape():
+    max_retries = 5
     global col_num
     col_num = findFirstEmptyCol()
     try:
         # if the script has not run already date_today
         if findLastSavedDate():
-            while (True):
+            for _ in range(max_retries):
                 counter2.count = 1
                 # multithreading for the gathering and saving of the data from the three websites
                 thread1 = threading.Thread(target=lambda: getDataDashboard(startDashboard()))
