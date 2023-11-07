@@ -35,7 +35,7 @@ def startDashboard():
     """
     Sends an API request to 'https://verkehr.aachen.de'
     """""
-    url = "https://verkehr.aachen.de/api/sensorthings/Things?$count=false&$filter=properties/type%20eq%20%27Verkehrszaehlstelle%27%20and%20properties/archive%20eq%20%27false%27&$expand=Locations,Datastreams(%24filter%3Dproperties%2FKlasse%20eq%20%27Bike%27%20and%20properties%2FAggregation%20eq%20%27d%27),Datastreams%2FObservedProperty,Datastreams%2FObservations(%24top%3D7%3B%24orderby%3DphenomenonTime%20desc%3B%24select%3Dresult%2CphenomenonTime%3B%24filter%3Ddate(phenomenonTime)%20ge%20date("+API_date+"))&$top=300&$select=@iot.id,description,name,properties/props&$orderBy=name"
+    url = "https://verkehr.aachen.de/api/sensorthings/Things?$count=false&$filter=properties/type%20eq%20%27Verkehrszaehlstelle%27%20and%20properties/archive%20eq%20%27false%27&$expand=Locations,Datastreams(%24filter%3Dproperties%2FKlasse%20eq%20%27Bike%27%20and%20properties%2FAggregation%20eq%20%27d%27),Datastreams%2FObservedProperty,Datastreams%2FObservations(%24top%3D7%3B%24orderby%3DphenomenonTime%20desc%3B%24select%3Dresult%2CphenomenonTime%3B%24filter%3Ddate(phenomenonTime)%20ge%20date("+get_API_date()+"))&$top=300&$select=@iot.id,description,name,properties/props&$orderBy=name"
     html_source = send_api_request_with_timeout(url)
     return html_source
 
@@ -60,10 +60,11 @@ def startPictures():
     return html_source
 
 
-def send_api_request_with_timeout(url, timeout=1, max_retries=10):
+def send_api_request_with_timeout(url, timeout = 10, max_retries = 10):
     for _ in range(max_retries):
         try:
-            response = requests.get(url, timeout=timeout)
+            response = requests.get(url, timeout = timeout)
+            print(response)
             response.raise_for_status()
             return response.text
         except requests.exceptions.RequestException as e:
@@ -448,9 +449,18 @@ def csvBackup():
                         writer.writerow([data])
                     else:
                         writer.writerow(["No Data"])
+                        
+                        
+def dir_check():
+    dir = current_path+"\\Excel"
+    if(os.path.exists(dir)):
+        return
+    else:
+        os.mkdir(dir)
 
 
-current_path = "C:\\Users\\Fabian\\Desktop\\radwegzaehler"
+# current path
+current_path = os.getcwd()
 # assign the value 1 to the count attribute of the counter2 object
 counter2.count = 1
 # create a date object representing the current date of yesterday
@@ -469,13 +479,12 @@ worksheet = workbook.active
 csvDataLists = [[], [], [], []]
 # array for gathering data required for the csv backup
 dataList = []
-# position in px that the mouse gets moved during scraping process
-move_mouse_x_koord = 1880
 # temp storage
 old_dates = [] 
 old_dataList = []
-xpath_cache = {}
-API_date = get_API_date()
+# makes sure the file structure is correct
+dir_check()
+
 
 def scrape():
     max_retries = 5
@@ -527,14 +536,13 @@ def pre_scrape(user_input):
     
     global date_reverse
     date_reverse = date(int(user_input))
-    original_sequence = [6, 5, 4, 3, 2, 1]
     
     temp_date = datetime.strptime(dateDE, date_format)
     new_date = temp_date - timedelta(days=int(user_input)-1)
     dateDE = new_date.strftime(date_format)
     scrape()
-    
-    
+
+
 def past_day():
     """
     Will run the scraper with the number of days in the past specified
@@ -545,7 +553,7 @@ def past_day():
     
 def file_location():
     root.attributes("-topmost", 0)
-    subprocess.Popen(['explorer', current_path+"\\Excel\\"])
+    subprocess.Popen(['explorer', current_path+"\\Excel"])
     
     
 def run_action():
