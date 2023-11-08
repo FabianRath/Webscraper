@@ -22,13 +22,15 @@ from tkinter import ttk
 import sys
 import urllib.parse
 
+""""
+check Monat
+- neuer Monat
+    -> rename
+    -> email mit Datei    
 
-def startDriver():
-    """
-    Starts Chrome webdriver
-    """""
-    newdriver = webdriver.Chrome()
-    return newdriver
+File Struktur
+    
+"""
 
 
 def startDashboard():
@@ -176,7 +178,7 @@ def getBilder(content):
     Gathers the name of the weather icon of date_today
     """""
     substringList = []
-    trimmed_date = dateDEdate_Today[:-4]
+    trimmed_date = dateDEToday[:-4]
     regex = r'<td class="" data-tt-args="\[&quot;'+trimmed_date+'&quot;,&quot;.*&quot;,&quot;.*&quot;,.,0, 0, &quot;&quot;, &quot;&quot;,0, &quot;&quot;, &quot;&quot;, &quot;&quot;, &quot;&quot;, &quot;&quot;, &quot;&quot;, &quot;&quot;, &quot;&quot;]" data-tt-function="TTwwsym">[\r\n]+ <img src="https:\/\/st\.wetteronline\.de\/dr\/1\.1\..*\/city\/prozess\/graphiken\/symbole\/standard\/farbe\/png\/[0-9][0-9]x[0-9][0-9]\/.*\.png'
     regexes = [r'bd____.png',
                r'bdg1__.png',
@@ -276,7 +278,7 @@ def get_dateDE():
     return date_str
 
 
-def dateDEdate_Today():
+def dateDEToday():
     """
     Gathers and returns the date from date_today in format DD/MM/YYYY
     """""
@@ -313,6 +315,12 @@ def findFirstEmptyCol():
             print("find first empty col")
 
 
+def new_month():
+    file_name = "data"+dateDE.strftime("%B")
+    
+
+
+
 def findLastSavedDate():
     """
     Finds the date from the last time the script ran, returns true if the last saved date is yesterdays date. Returns false if that is not the case
@@ -325,7 +333,8 @@ def findLastSavedDate():
             path = current_path+"/Excel/data.xlsx"
             df = pd.read_excel(path)
             highest_column_value = df.iloc[0, df.shape[1] - 1]
-            
+            if(highest_column_value[3:-5] != dateDEToday):
+                new_month()
             date_format = "%d.%m.%Y"
             formatted_highest_column_value = datetime.strptime(highest_column_value, date_format)
             formatted_dateDE = datetime.strptime(dateDE, date_format)
@@ -375,7 +384,7 @@ def saveToExcel3(imgName):
     from datetime import datetime
     global dateDE
     temp1 = datetime.strptime(dateDE, '%d.%m.%Y')
-    temp2 = datetime.strptime(dateDEdate_Today, '%d.%m.%Y')
+    temp2 = datetime.strptime(dateDEToday, '%d.%m.%Y')
     worksheet.cell(row=3, column=col_num+1).value = 'Wetter Symbol'
     if (not imgName or temp1 + timedelta(days=1) != temp2):
         worksheet.cell(row=3, column=col_num+2).value = "No Data"
@@ -468,7 +477,7 @@ date_reverse = date(1)
 # create a date object representing the current date in the German language of yesterday
 dateDE = get_dateDE()
 # create a date object representing the current date in the German language
-dateDEdate_Today = dateDEdate_Today()
+dateDEToday = dateDEToday()
 # find the first empty column in the worksheet and assign the result to the col_num variable
 col_num = findFirstEmptyCol()
 # create a new workbook object
@@ -484,7 +493,7 @@ old_dates = []
 old_dataList = []
 # makes sure the file structure is correct
 dir_check()
-
+file_name = "data"
 
 def scrape():
     max_retries = 5
@@ -499,17 +508,17 @@ def scrape():
                 thread1 = threading.Thread(target=lambda: getDataDashboard(startDashboard()))
                 thread2 = threading.Thread(target=lambda: getWeatherData(startWeather()))
                 thread3 = threading.Thread(target=lambda: getBilder(startPictures()))
-                thread4 = threading.Thread(target=lambda: csvBackup())
-                thread5 = threading.Thread(target=lambda: workbook.save(current_path+"\Excel\data.xlsx"))
+                #thread4 = threading.Thread(target=lambda: csvBackup())
+                thread5 = threading.Thread(target=lambda: workbook.save(current_path+"\\Excel\\"+file_name+".xlsx"))
                 thread1.start()
                 thread2.start()
                 thread3.start()
                 threads = [thread1, thread2, thread3]
                 for thread in threads:
                     thread.join()
-                thread4.start()
+                #thread4.start()
                 thread5.start()
-                thread4.join()
+                #thread4.join()
                 thread5.join()
                 # if the excel file has been appropriately filled with data the loop breaks
                 if (checker()):
