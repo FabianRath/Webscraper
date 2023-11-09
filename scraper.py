@@ -21,6 +21,10 @@ from tkinter import PhotoImage
 from tkinter import ttk
 import sys
 import urllib.parse
+import smtplib
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
+from email.mime.application import MIMEApplication
 
 """"
 check Monat
@@ -316,11 +320,46 @@ def findFirstEmptyCol():
 
 
 def new_month():
-    file_name = "data"+dateDE.strftime("%B")
+    """
+    Rename the file with the corresponding month
+    """""
+    global file_name
+    date_today = datetime.date.today()
+    yesterday = date_today - timedelta(days=1)
+    file_name = "data"+yesterday.strftime("%B")
     
+    
+def send_email():
+    sender_email = "sender"
+    sender_password = "password"
+    recipient_email = "recipient"
 
+    message = MIMEMultipart()
+    message["From"] = sender_email
+    message["To"] = recipient_email
+    message["Subject"] = "Data"
 
+    # body
+    body = "Monatlicher Daten Export"
+    message.attach(MIMEText(body, "plain"))
 
+    # Add the attachment
+    attachment_path = current_path+"\\"+file_name
+    with open(attachment_path, "rb") as attachment:
+        attached_file = MIMEApplication(attachment.read(), _subtype="txt")
+        attached_file.add_header("Content-Disposition", f"attachment; filename={attachment_path}")
+
+    message.attach(attached_file)
+
+    # Connect to the SMTP server
+    with smtplib.SMTP("mail.gmail.com", 587) as server:
+        server.starttls()
+        server.login(sender_email, sender_password)
+
+        # Send the email
+        server.sendmail(sender_email, recipient_email, message.as_string())
+    
+        
 def findLastSavedDate():
     """
     Finds the date from the last time the script ran, returns true if the last saved date is yesterdays date. Returns false if that is not the case
@@ -335,6 +374,7 @@ def findLastSavedDate():
             highest_column_value = df.iloc[0, df.shape[1] - 1]
             if(highest_column_value[3:-5] != dateDEToday):
                 new_month()
+                new_month_marker = True
             date_format = "%d.%m.%Y"
             formatted_highest_column_value = datetime.strptime(highest_column_value, date_format)
             formatted_dateDE = datetime.strptime(dateDE, date_format)
@@ -494,6 +534,8 @@ old_dataList = []
 # makes sure the file structure is correct
 dir_check()
 file_name = "data"
+new_month_marker = False
+
 
 def scrape():
     max_retries = 5
@@ -523,6 +565,8 @@ def scrape():
                 # if the excel file has been appropriately filled with data the loop breaks
                 if (checker()):
                     break
+            if(new_month_marker):
+                send_email()
     except Exception as e: 
         print("scrape failed")
         print(e)
