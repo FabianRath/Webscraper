@@ -25,17 +25,7 @@ import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from email.mime.application import MIMEApplication
-
-""""
-check Monat
-- neuer Monat
-    -> rename
-    -> email mit Datei    
-
-File Struktur
-    
-"""
-
+from decouple import config
 
 def startDashboard():
     """
@@ -70,7 +60,6 @@ def send_api_request_with_timeout(url, timeout = 10, max_retries = 10):
     for _ in range(max_retries):
         try:
             response = requests.get(url, timeout = timeout)
-            print(response)
             response.raise_for_status()
             return response.text
         except requests.exceptions.RequestException as e:
@@ -177,7 +166,7 @@ def getWeatherData(content):
         csvDataCollect(datavalues, 1)
 
 
-def getBilder(content):
+def getPictures(content):
     """
     Gathers the name of the weather icon of date_today
     """""
@@ -330,9 +319,9 @@ def new_month():
     
     
 def send_email():
-    sender_email = "sender"
-    sender_password = "password"
-    recipient_email = "recipient"
+    sender_email = config('SENDEREMAIL')
+    sender_password = config('SENDERPASSWORD')
+    recipient_email = config('RECIPIENTEMAIL')
 
     message = MIMEMultipart()
     message["From"] = sender_email
@@ -340,24 +329,26 @@ def send_email():
     message["Subject"] = "Data"
 
     # body
-    body = "Monatlicher Daten Export"
+    body = "Daten Export"
     message.attach(MIMEText(body, "plain"))
 
     # Add the attachment
-    attachment_path = current_path+"\\"+file_name
+    attachment_path = current_path+"\\Excel\\"+file_name+".xlsx"
     with open(attachment_path, "rb") as attachment:
         attached_file = MIMEApplication(attachment.read(), _subtype="txt")
-        attached_file.add_header("Content-Disposition", f"attachment; filename={attachment_path}")
+        attached_file.add_header("Content-Disposition", f"attachment; filename={file_name}.xlsx")
 
     message.attach(attached_file)
 
     # Connect to the SMTP server
-    with smtplib.SMTP("mail.gmail.com", 587) as server:
+    with smtplib.SMTP("mail.gmx.com", 587) as server:
         server.starttls()
         server.login(sender_email, sender_password)
 
         # Send the email
         server.sendmail(sender_email, recipient_email, message.as_string())
+        
+    print("send mail")
     
         
 def findLastSavedDate():
@@ -373,7 +364,9 @@ def findLastSavedDate():
             df = pd.read_excel(path)
             highest_column_value = df.iloc[0, df.shape[1] - 1]
             if(highest_column_value[3:-5] != dateDEToday):
+            #if(highest_column_value[3:-5] != dateDEToday[3:-5]):
                 new_month()
+                global new_month_marker
                 new_month_marker = True
             date_format = "%d.%m.%Y"
             formatted_highest_column_value = datetime.strptime(highest_column_value, date_format)
@@ -549,7 +542,7 @@ def scrape():
                 # multithreading for the gathering and saving of the data from the three websites
                 thread1 = threading.Thread(target=lambda: getDataDashboard(startDashboard()))
                 thread2 = threading.Thread(target=lambda: getWeatherData(startWeather()))
-                thread3 = threading.Thread(target=lambda: getBilder(startPictures()))
+                thread3 = threading.Thread(target=lambda: getPictures(startPictures()))
                 #thread4 = threading.Thread(target=lambda: csvBackup())
                 thread5 = threading.Thread(target=lambda: workbook.save(current_path+"\\Excel\\"+file_name+".xlsx"))
                 thread1.start()
@@ -563,9 +556,10 @@ def scrape():
                 #thread4.join()
                 thread5.join()
                 # if the excel file has been appropriately filled with data the loop breaks
-                if (checker()):
+                if(checker()):
                     break
             if(new_month_marker):
+                os.remove(current_path+"\\Excel\\data.xlsx")
                 send_email()
     except Exception as e: 
         print("scrape failed")
