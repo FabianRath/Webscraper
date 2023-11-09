@@ -21,15 +21,11 @@ from tkinter import PhotoImage
 from tkinter import ttk
 import sys
 import urllib.parse
-
-
-def startDriver():
-    """
-    Starts Chrome webdriver
-    """""
-    newdriver = webdriver.Chrome()
-    return newdriver
-
+import smtplib
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
+from email.mime.application import MIMEApplication
+from decouple import config
 
 def startDashboard():
     """
@@ -64,7 +60,6 @@ def send_api_request_with_timeout(url, timeout = 10, max_retries = 10):
     for _ in range(max_retries):
         try:
             response = requests.get(url, timeout = timeout)
-            print(response)
             response.raise_for_status()
             return response.text
         except requests.exceptions.RequestException as e:
@@ -171,12 +166,12 @@ def getWeatherData(content):
         csvDataCollect(datavalues, 1)
 
 
-def getBilder(content):
+def getPictures(content):
     """
     Gathers the name of the weather icon of date_today
     """""
     substringList = []
-    trimmed_date = dateDEdate_Today[:-4]
+    trimmed_date = dateDEToday[:-4]
     regex = r'<td class="" data-tt-args="\[&quot;'+trimmed_date+'&quot;,&quot;.*&quot;,&quot;.*&quot;,.,0, 0, &quot;&quot;, &quot;&quot;,0, &quot;&quot;, &quot;&quot;, &quot;&quot;, &quot;&quot;, &quot;&quot;, &quot;&quot;, &quot;&quot;, &quot;&quot;]" data-tt-function="TTwwsym">[\r\n]+ <img src="https:\/\/st\.wetteronline\.de\/dr\/1\.1\..*\/city\/prozess\/graphiken\/symbole\/standard\/farbe\/png\/[0-9][0-9]x[0-9][0-9]\/.*\.png'
     regexes = [r'bd____.png',
                r'bdg1__.png',
@@ -276,7 +271,7 @@ def get_dateDE():
     return date_str
 
 
-def dateDEdate_Today():
+def dateDEToday():
     """
     Gathers and returns the date from date_today in format DD/MM/YYYY
     """""
@@ -313,6 +308,49 @@ def findFirstEmptyCol():
             print("find first empty col")
 
 
+def new_month():
+    """
+    Rename the file with the corresponding month
+    """""
+    global file_name
+    date_today = datetime.date.today()
+    yesterday = date_today - timedelta(days=1)
+    file_name = "data"+yesterday.strftime("%B")
+    
+    
+def send_email():
+    sender_email = config('SENDEREMAIL')
+    sender_password = config('SENDERPASSWORD')
+    recipient_email = config('RECIPIENTEMAIL')
+
+    message = MIMEMultipart()
+    message["From"] = sender_email
+    message["To"] = recipient_email
+    message["Subject"] = "Data"
+
+    # body
+    body = "Daten Export"
+    message.attach(MIMEText(body, "plain"))
+
+    # Add the attachment
+    attachment_path = current_path+"\\Excel\\"+file_name+".xlsx"
+    with open(attachment_path, "rb") as attachment:
+        attached_file = MIMEApplication(attachment.read(), _subtype="txt")
+        attached_file.add_header("Content-Disposition", f"attachment; filename={file_name}.xlsx")
+
+    message.attach(attached_file)
+
+    # Connect to the SMTP server
+    with smtplib.SMTP("mail.gmx.com", 587) as server:
+        server.starttls()
+        server.login(sender_email, sender_password)
+
+        # Send the email
+        server.sendmail(sender_email, recipient_email, message.as_string())
+        
+    print("send mail")
+    
+        
 def findLastSavedDate():
     """
     Finds the date from the last time the script ran, returns true if the last saved date is yesterdays date. Returns false if that is not the case
@@ -325,7 +363,11 @@ def findLastSavedDate():
             path = current_path+"/Excel/data.xlsx"
             df = pd.read_excel(path)
             highest_column_value = df.iloc[0, df.shape[1] - 1]
-            
+            if(highest_column_value[3:-5] != dateDEToday):
+            #if(highest_column_value[3:-5] != dateDEToday[3:-5]):
+                new_month()
+                global new_month_marker
+                new_month_marker = True
             date_format = "%d.%m.%Y"
             formatted_highest_column_value = datetime.strptime(highest_column_value, date_format)
             formatted_dateDE = datetime.strptime(dateDE, date_format)
@@ -375,7 +417,7 @@ def saveToExcel3(imgName):
     from datetime import datetime
     global dateDE
     temp1 = datetime.strptime(dateDE, '%d.%m.%Y')
-    temp2 = datetime.strptime(dateDEdate_Today, '%d.%m.%Y')
+    temp2 = datetime.strptime(dateDEToday, '%d.%m.%Y')
     worksheet.cell(row=3, column=col_num+1).value = 'Wetter Symbol'
     if (not imgName or temp1 + timedelta(days=1) != temp2):
         worksheet.cell(row=3, column=col_num+2).value = "No Data"
@@ -468,7 +510,7 @@ date_reverse = date(1)
 # create a date object representing the current date in the German language of yesterday
 dateDE = get_dateDE()
 # create a date object representing the current date in the German language
-dateDEdate_Today = dateDEdate_Today()
+dateDEToday = dateDEToday()
 # find the first empty column in the worksheet and assign the result to the col_num variable
 col_num = findFirstEmptyCol()
 # create a new workbook object
@@ -484,6 +526,8 @@ old_dates = []
 old_dataList = []
 # makes sure the file structure is correct
 dir_check()
+file_name = "data"
+new_month_marker = False
 
 
 def scrape():
@@ -498,22 +542,25 @@ def scrape():
                 # multithreading for the gathering and saving of the data from the three websites
                 thread1 = threading.Thread(target=lambda: getDataDashboard(startDashboard()))
                 thread2 = threading.Thread(target=lambda: getWeatherData(startWeather()))
-                thread3 = threading.Thread(target=lambda: getBilder(startPictures()))
-                thread4 = threading.Thread(target=lambda: csvBackup())
-                thread5 = threading.Thread(target=lambda: workbook.save(current_path+"\Excel\data.xlsx"))
+                thread3 = threading.Thread(target=lambda: getPictures(startPictures()))
+                #thread4 = threading.Thread(target=lambda: csvBackup())
+                thread5 = threading.Thread(target=lambda: workbook.save(current_path+"\\Excel\\"+file_name+".xlsx"))
                 thread1.start()
                 thread2.start()
                 thread3.start()
                 threads = [thread1, thread2, thread3]
                 for thread in threads:
                     thread.join()
-                thread4.start()
+                #thread4.start()
                 thread5.start()
-                thread4.join()
+                #thread4.join()
                 thread5.join()
                 # if the excel file has been appropriately filled with data the loop breaks
-                if (checker()):
+                if(checker()):
                     break
+            if(new_month_marker):
+                os.remove(current_path+"\\Excel\\data.xlsx")
+                send_email()
     except Exception as e: 
         print("scrape failed")
         print(e)
