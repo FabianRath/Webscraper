@@ -3,16 +3,11 @@ import time
 import openpyxl
 import re
 import pandas as pd
-from selenium import webdriver
-from selenium.webdriver.common.by import By
-from selenium.webdriver.support import expected_conditions as EC
-from selenium.webdriver.support.ui import WebDriverWait
 import datetime
 from datetime import timedelta
 from openpyxl.utils import get_column_letter
 import requests
 import threading
-import csv
 import tkinter as tk
 import threading
 from tkinter import simpledialog
@@ -115,9 +110,6 @@ def getDataDashboard(content):
              
     for data_name, data in zip(data_name_list, data_list):
         saveToExcel(data_name, data)
-        csvParser(data_name)
-        
-    csvDataCollect(data_list, 2)
 
 
 def getWeatherData(content):
@@ -163,7 +155,6 @@ def getWeatherData(content):
         for i, data in enumerate(datavalues):
             datavalues[i] = data.replace('.', ',')
         saveToExcel2(dataNames, datavalues)
-        csvDataCollect(datavalues, 1)
 
 
 def getPictures(content):
@@ -222,7 +213,6 @@ def getPictures(content):
     else:
         saveToExcel3(substring)
         substringList.append(substring)
-    csvDataCollect(substringList, 0)
 
 
 def startExcel():
@@ -363,8 +353,7 @@ def findLastSavedDate():
             path = current_path+"/Excel/data.xlsx"
             df = pd.read_excel(path)
             highest_column_value = df.iloc[0, df.shape[1] - 1]
-            if(highest_column_value[3:-5] != dateDEToday):
-            #if(highest_column_value[3:-5] != dateDEToday[3:-5]):
+            if(highest_column_value[3:-5] != dateDEToday[3:-5]):
                 new_month()
                 global new_month_marker
                 new_month_marker = True
@@ -440,59 +429,6 @@ def checker():
     return column_1_empty
 
 
-def csvDataCollect(data_list, index):
-    """
-    Collects all data into a list
-    """""
-    listDateDE = []
-    listDateDE.append(dateDE)
-    csvDataLists[0] = listDateDE
-    if index == 0:
-        csvDataLists[1] = data_list
-    elif index == 1:
-        csvDataLists[2] = data_list
-    elif index == 2:
-        csvDataLists[3] = data_list
-    
-
-def csvParser(lines):
-    """
-    Parses zählstellen data into one list
-    """""
-    if (isinstance(lines, int)):
-        dataList.append(lines)
-    elif (len(lines) == 4):
-        dataList.append(lines[1])
-        dataList.append(lines[3])
-    elif (len(lines) == 2):
-        dataList.append(lines[1])
-    
-
-def csvBackup():
-    """
-    Writes all data into a new csv file for each day
-    """""
-    x = 0
-    text = []
-    text.append("Bilder Name nicht passend zum Datum +1 Tag")
-    csvDataLists.insert(0, text)
-    csvFileName = current_path+"/Csv/"+dateDE+".csv"
-    if os.path.isfile(csvFileName):
-        os.remove(csvFileName)
-    with open(csvFileName, 'a', newline='') as file:
-        writer = csv.writer(file)
-        for csvDataList in csvDataLists:
-            for data in csvDataList:
-                x = x+1
-                if (x == 3 and not data):
-                    writer.writerow(["No Data"])
-                else:
-                    if (data != 0):
-                        writer.writerow([data])
-                    else:
-                        writer.writerow(["No Data"])
-                        
-                        
 def dir_check():
     dir = current_path+"\\Excel"
     if(os.path.exists(dir)):
@@ -517,10 +453,6 @@ col_num = findFirstEmptyCol()
 workbook = startExcel()
 # get the active worksheet in the workbook
 worksheet = workbook.active
-# 2d array for gathering data required for the csv backup
-csvDataLists = [[], [], [], []]
-# array for gathering data required for the csv backup
-dataList = []
 # temp storage
 old_dates = [] 
 old_dataList = []
@@ -543,18 +475,15 @@ def scrape():
                 thread1 = threading.Thread(target=lambda: getDataDashboard(startDashboard()))
                 thread2 = threading.Thread(target=lambda: getWeatherData(startWeather()))
                 thread3 = threading.Thread(target=lambda: getPictures(startPictures()))
-                #thread4 = threading.Thread(target=lambda: csvBackup())
-                thread5 = threading.Thread(target=lambda: workbook.save(current_path+"\\Excel\\"+file_name+".xlsx"))
+                thread4 = threading.Thread(target=lambda: workbook.save(current_path+"\\Excel\\"+file_name+".xlsx"))
                 thread1.start()
                 thread2.start()
                 thread3.start()
                 threads = [thread1, thread2, thread3]
                 for thread in threads:
                     thread.join()
-                #thread4.start()
-                thread5.start()
-                #thread4.join()
-                thread5.join()
+                thread4.start()
+                thread4.join()
                 # if the excel file has been appropriately filled with data the loop breaks
                 if(checker()):
                     break
