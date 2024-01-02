@@ -103,7 +103,11 @@ def getDataDashboard(content):
             temp.append(str(match1[0])+ " " +str(match3[1]))
             data_name_list.append(temp)
 
-        match4[0] = match4[0][:-2]
+        if(len(match4) > 0):
+            match4[0] = match4[0][:-2]
+        else:
+            match4.append(0)
+            
         if(len(match4) == 2):
             match4[1] = match4[1][:-2]
         data_list.append(match4)
@@ -435,7 +439,11 @@ def dir_check():
         return
     else:
         os.mkdir(dir)
-
+        
+def copy():
+    with open(current_path+"\\Excel\\data.xlsx", 'rb') as source_file:
+        with open(current_path+"\\Excel\\data - Copy.xlsx", 'wb') as destination_file:
+            destination_file.write(source_file.read())
 
 # current path
 current_path = os.getcwd()
@@ -493,6 +501,7 @@ def scrape():
     except Exception as e: 
         print("scrape failed")
         print(e)
+    copy()
 
     
 def delete():
